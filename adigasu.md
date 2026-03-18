@@ -1,4 +1,4 @@
-어디가수
+
 ![logo](images/logo.png)
 
 # 1. Conceptualization

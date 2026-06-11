@@ -32,8 +32,13 @@ function NavScreen({ route, soundOn, onToggleSound, onExit, onArrive }) {
   const [phase, setPhase] = useState('riding'); // riding | preAlert | transfer | finalAlert | done
   const [paused, setPaused] = useState(false);
   const [mode, setMode] = useState('gps');     // 'gps' (실시간 위치) | 'sim' (데모)
+  const [passed, setPassed] = useState(false); // 하차역을 지나쳤는지(지나침 알림 표시용)
+  const [live, setLive] = useState('');        // 스크린리더 전용 라이브 영역 메시지(aria-live)
   const preFired = useRef(-1);
+  const minAlight = useRef(Infinity);          // 현재 leg에서 하차역까지의 최근접 거리(지나침 판정용)
+  const overFired = useRef(-1);                // 지나침 알림을 이미 띄운 leg 인덱스
   const geo = useGeolocation(mode === 'gps');  // 실시간 GPS 구독 (gps 모드일 때만)
+  useWakeLock(true);                           // 안내 중에는 화면이 꺼지지 않도록 유지(알림 멈춤 방지)
 
   const leg = route.legs[legIdx];
   const alightIdx = leg.stops.length - 1;
@@ -68,16 +73,35 @@ function NavScreen({ route, soundOn, onToggleSound, onExit, onArrive }) {
   }
   function advance() { arriveAt(stopIdx + 1); }  // 데모: 한 정류장 전진
 
-  function firePre()   { vibrate([200,100,200]); speak(`곧 내리세요. 다음 정류장은 ${alightName} 입니다.`, soundOn); }
-  function fireTransfer(){ const nl = route.legs[legIdx+1]; vibrate([300,120,300]); speak(`환승입니다. ${nl.line}번 버스로 갈아타세요.`, soundOn); }
-  function fireFinal()  { vibrate([400,150,400,150,500]); speak(`지금 내리세요! ${alightName} 입니다.`, soundOn); }
+  // 음성 발화(Web Speech) + 스크린리더(aria-live) 동시 안내 — 저시력 사용자가 OS 보이스오버로도 알림을 받게 한다.
+  function announce(msg) { speak(msg, soundOn); setLive(msg); }
+  function firePre()   { vibrate([200,100,200]); announce(`곧 내리세요. 다음 정류장은 ${alightName} 입니다.`); }
+  function fireTransfer(){ const nl = route.legs[legIdx+1]; vibrate([300,120,300]); announce(`환승입니다. ${nl.line}번 버스로 갈아타세요.`); }
+  function fireFinal()  { vibrate([400,150,400,150,500]); announce(`지금 내리세요! ${alightName} 입니다.`); }
+  // 지나침: 70m 도착 반경을 건너뛰고 하차역을 지난 경우. 마지막 구간이면 "다음에 내리세요", 환승 구간이면 환승 재안내.
+  function firePassed() {
+    setPassed(true);
+    vibrate([400,150,400,150,500]);
+    if (isLastLeg) announce(`내릴 곳을 지나쳤어요. ${alightName}을 지났습니다. 다음 정류장에서 내리세요.`);
+    else { const nl = route.legs[legIdx+1]; announce(`갈아탈 곳을 지나쳤어요. ${alightName}을 지났습니다. ${nl.line}번 버스로 갈아타세요.`); }
+  }
 
   // ── GPS 엔진: 실시간 위치 → 지오펜싱 → 진행/알림 ──────────────
   useEffect(() => {
     if (mode !== 'gps' || phase !== 'riding' || !geo.coords) return;
     const g = geofenceLeg(leg.stops, geo.coords);
     if (!g) return;
-    if (g.alightDist < GEO.ARRIVE_R) { arriveAt(alightIdx); return; }          // 하차역 도착
+    if (g.alightDist < minAlight.current) minAlight.current = g.alightDist;     // 하차역 최근접 거리 추적
+    if (g.alightDist < GEO.ARRIVE_R) { arriveAt(alightIdx); return; }           // 하차역 도착
+    // 지나침: 한 번 근접(<PASS_R)했다가 도착 판정 없이 다시 멀어지면(>최근접+HYST) 지나친 것으로 본다.
+    if (overFired.current !== legIdx &&
+        minAlight.current < GEO.PASS_R && g.alightDist > minAlight.current + GEO.PASS_HYST) {
+      overFired.current = legIdx;
+      setStopIdx(alightIdx);
+      setPhase(isLastLeg ? 'finalAlert' : 'transfer');
+      firePassed();
+      return;
+    }
     if (g.alightDist < GEO.PRE_R)    { arriveAt(Math.max(stopIdx, alightIdx - 1)); return; } // 곧 내리세요
     if (g.nearestDist < GEO.ARRIVE_R && g.nearestIdx > stopIdx) arriveAt(g.nearestIdx); // 중간 정류장 통과
   }, [geo.coords, mode, phase, stopIdx, legIdx]);
@@ -91,12 +115,15 @@ function NavScreen({ route, soundOn, onToggleSound, onExit, onArrive }) {
 
   function dismissPre() { setPhase('riding'); }
   function doTransfer() {
+    minAlight.current = Infinity; setPassed(false);   // 새 구간: 최근접·지나침 상태 초기화
     setLegIdx(l => l + 1); setStopIdx(0); setPhase('riding');
-    speak(`${route.legs[legIdx+1].line}번 버스 탑승. 안내를 이어갑니다.`, soundOn);
+    announce(`${route.legs[legIdx+1].line}번 버스 탑승. 안내를 이어갑니다.`);
   }
 
   return (
     <div style={{ background:T.ink, minHeight:'100%', display:'flex', flexDirection:'column', position:'relative', color:'#fff' }}>
+      {/* 스크린리더 전용 라이브 영역 — 알림 문구를 OS 보이스오버/톡백이 즉시 읽어준다(시각적으론 숨김) */}
+      <div className="ag-sr-only" role="status" aria-live="assertive">{live}</div>
       <TopBar title="안내 중" subtitle={`${leg.line}번 버스 탑승 중`} onBack={onExit} bg={T.ink}
         right={
           <button onClick={onToggleSound} aria-label="음성 안내" style={{
@@ -159,8 +186,8 @@ function NavScreen({ route, soundOn, onToggleSound, onExit, onArrive }) {
       </div>
 
       {phase==='preAlert' && <PreAlert name={alightName} onConfirm={dismissPre} />}
-      {phase==='transfer' && <TransferSheet from={alightName} nextLeg={route.legs[legIdx+1]} soundOn={soundOn} onBoard={doTransfer} />}
-      {phase==='finalAlert' && <FinalAlert name={alightName} onConfirm={onArrive} />}
+      {phase==='transfer' && <TransferSheet from={alightName} nextLeg={route.legs[legIdx+1]} passed={passed} soundOn={soundOn} onBoard={doTransfer} />}
+      {phase==='finalAlert' && <FinalAlert name={alightName} passed={passed} onConfirm={onArrive} />}
     </div>
   );
 }
@@ -270,7 +297,8 @@ function PreAlert({ name, onConfirm }) {
 }
 
 // ── Transfer sheet (갈아타세요) ─────────────────────────────
-function TransferSheet({ from, nextLeg, onBoard }) {
+// passed=true 이면 환승역을 이미 지난 상황 → "갈아탈 곳을 지나쳤어요"로 문구를 바꿔 즉시 하차를 유도한다.
+function TransferSheet({ from, nextLeg, passed, onBoard }) {
   const [count, setCount] = useState(8);
   useEffect(() => {
     if (count <= 0) { onBoard(); return; }
@@ -282,9 +310,9 @@ function TransferSheet({ from, nextLeg, onBoard }) {
       <div style={{ position:'absolute', inset:0, background:'rgba(15,23,38,0.5)' }} />
       <div className="ag-sheet" style={{ position:'relative', background:'#fff', borderRadius:'32px 32px 0 0',
         padding:'28px 24px calc(26px + env(safe-area-inset-bottom))', textAlign:'center', boxShadow:T.shadowLg }}>
-        <Pill bg={T.inkSoft} size={17}>환승</Pill>
-        <div style={{ fontSize:34, fontWeight:800, color:T.ink, margin:'14px 0 4px', letterSpacing:'-0.02em' }}>여기서 갈아타세요</div>
-        <div style={{ fontSize:18, fontWeight:700, color:T.muted, marginBottom:18 }}>{from} 정류장에서 내려요</div>
+        <Pill bg={passed?T.red:T.inkSoft} size={17}>{passed?'지나침':'환승'}</Pill>
+        <div style={{ fontSize:34, fontWeight:800, color:T.ink, margin:'14px 0 4px', letterSpacing:'-0.02em' }}>{passed?'갈아탈 곳을 지나쳤어요':'여기서 갈아타세요'}</div>
+        <div style={{ fontSize:18, fontWeight:700, color:passed?T.red:T.muted, marginBottom:18 }}>{passed?`${from}을 지났어요 · 다음 정류장에서 내려 갈아타세요`:`${from} 정류장에서 내려요`}</div>
         <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:12, background:T.paper, borderRadius:20, padding:'18px 0', marginBottom:8 }}>
           <span style={{ display:'inline-flex', alignItems:'center', gap:8, padding:'10px 18px', borderRadius:14,
             background:nextLeg.color, color:'#fff', fontSize:26, fontWeight:800 }}>
@@ -302,15 +330,21 @@ function TransferSheet({ from, nextLeg, onBoard }) {
 }
 
 // ── Final alert (지금 내리세요) — full red ───────────────────
-function FinalAlert({ name, onConfirm }) {
+// passed=true 이면 하차역을 이미 지난 상황 → "지나쳤어요! 다음에 내리세요"로 안내한다.
+function FinalAlert({ name, passed, onConfirm }) {
   return (
     <div className="ag-flash" style={{ position:'absolute', inset:0, zIndex:50, background:T.red,
       display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
       padding:'24px', textAlign:'center', color:'#fff' }}>
       <div className="ag-bell" style={{ marginBottom:8 }}><Icon name="alert" size={76} color="#fff" stroke={2.6} /></div>
-      <div style={{ fontSize:64, fontWeight:800, lineHeight:1.05, letterSpacing:'-0.03em' }}>지금<br/>내리세요!</div>
+      {passed
+        ? <>
+            <div style={{ fontSize:54, fontWeight:800, lineHeight:1.05, letterSpacing:'-0.03em' }}>지나쳤어요!</div>
+            <div style={{ fontSize:27, fontWeight:800, marginTop:10 }}>다음 정류장에서 내리세요</div>
+          </>
+        : <div style={{ fontSize:64, fontWeight:800, lineHeight:1.05, letterSpacing:'-0.03em' }}>지금<br/>내리세요!</div>}
       <div style={{ background:'rgba(255,255,255,0.22)', borderRadius:18, padding:'12px 26px', margin:'24px 0 36px' }}>
-        <span style={{ fontSize:34, fontWeight:800 }}>{name}</span>
+        <span style={{ fontSize:34, fontWeight:800 }}>{passed?`${name} 지남`:name}</span>
       </div>
       <div style={{ width:'100%', maxWidth:340 }}>
         <PrimaryButton tone="white" onClick={onConfirm}>확인</PrimaryButton>

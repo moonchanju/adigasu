@@ -17,6 +17,10 @@
   button { font-family:inherit; }
   ::-webkit-scrollbar { width:0; height:0; }
 
+  /* 스크린리더 전용(시각적으론 숨김) — aria-live 알림 영역에 사용 */
+  .ag-sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden;
+    clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+
   /* ── animations ─────────────────────────────── */
   @keyframes ag-sheet-up { from { transform:translateY(100%); } to { transform:translateY(0); } }
   .ag-sheet { animation:ag-sheet-up .42s cubic-bezier(.16,1,.3,1); }

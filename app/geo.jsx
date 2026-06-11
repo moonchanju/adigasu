@@ -50,9 +50,32 @@ function distM(a, b) {
 
 // 지오펜싱 임계값(미터)
 const GEO = {
-  ARRIVE_R: 70,   // 정류장 "도착/통과" 판정 반경
-  PRE_R:    450,  // 하차역 예고("곧 내리세요") 진입 반경
+  ARRIVE_R:  70,  // 정류장 "도착/통과" 판정 반경
+  PRE_R:     450, // 하차역 예고("곧 내리세요") 진입 반경
+  PASS_R:    130, // 하차역 최근접이 이 안(70~130m)까지 들어왔다가 다시 멀어지면 "지나침"으로 판정
+  PASS_HYST: 50,  // 최근접 대비 이만큼(m) 다시 멀어져야 지나침 확정(GPS 흔들림으로 인한 오탐 방지)
 };
+
+// 화면 꺼짐 방지(Screen Wake Lock API). 안내 중 화면이 자동으로 꺼지면 진동·음성 알림도
+// 함께 멈추므로, active일 때 화면 잠금을 잡고, 탭이 가려졌다 돌아오면 다시 잡는다.
+// 미지원 기기(예: 일부 iOS 버전)는 조용히 무시된다(안전 폴백: 화면 점유형 알림).
+function useWakeLock(active) {
+  React.useEffect(() => {
+    if (!active || typeof navigator === 'undefined' || !navigator.wakeLock) return;
+    let lock = null, stopped = false;
+    const acquire = async () => {
+      try { lock = await navigator.wakeLock.request('screen'); } catch (e) {}
+    };
+    const onVisible = () => { if (!stopped && document.visibilityState === 'visible') acquire(); };
+    acquire();
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      stopped = true;
+      document.removeEventListener('visibilitychange', onVisible);
+      try { lock && lock.release(); } catch (e) {}
+    };
+  }, [active]);
+}
 
 // 실시간 위치 추적 훅.
 // enabled=true 일 때 watchPosition 으로 구독, 언마운트/비활성 시 해제.
@@ -104,4 +127,4 @@ function geofenceLeg(stops, coords) {
   return { nearestIdx, nearestDist, alightDist: distM(coords, alight) };
 }
 
-Object.assign(window, { distM, GEO, useGeolocation, geofenceLeg, vibrate, vibrateFeedback, speak, setFeedbackSettings });
+Object.assign(window, { distM, GEO, useGeolocation, useWakeLock, geofenceLeg, vibrate, vibrateFeedback, speak, setFeedbackSettings });

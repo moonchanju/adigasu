@@ -11,40 +11,41 @@ classDiagram
     -List~String~ recentList
     +onInput(String keyword) void
     +showAutoComplete(List~Station~ candidates) void
-    +requestRoute(Station origin, Station dest) void
+    +doSearch() void
   }
   class LocationService {
     -ApiClient apiClient
     +searchStations(String keyword, String region) List~Station~
+    +staticStations(String keyword) List~Station~
   }
   class RouteCalculator {
     -ApiClient apiClient
     +searchRoutes(Station origin, Station dest) List~Route~
+    +mapOdsayPaths(Object result) List~Route~
     +sortByTransfer(List~Route~ routes) List~Route~
   }
   class Route {
     -double totalDistance
-    -int totalTime
+    -int durationMin
     -int transferCount
-    -int currentSegmentIndex
-    -List~RouteSegment~ segments
-    +getSegmentIndex() int
-    +moveToNextSegment() void
-    +isLastSegment() boolean
+    -int legIdx
+    -List~RouteSegment~ legs
+    +doTransfer() void
+    +isLastLeg() boolean
   }
   class RouteSegment {
-    -String lineName
+    -String line
     -String boardStation
     -Station alightStation
-    -int stationCount
+    -List~String~ stops
     +getAlightStation() Station
   }
   class Station {
-    -String stationId
-    -String stationName
-    -double latitude
-    -double longitude
-    -String region
+    -String id
+    -String name
+    -double lat
+    -double lng
+    -String cls
     +getName() String
     +getLat() double
     +getLng() double
@@ -55,33 +56,34 @@ classDiagram
     -GeofenceChecker geofence
     -AlertManager alertManager
     +startNavigation() void
-    +onLocationUpdate(Location loc) void
-    +updateProgress() void
+    +arriveAt(int target) void
+    +advance() void
     +stopNavigation() void
   }
   class LocationTracker {
     -int watchId
     -Location currentLocation
-    +startTracking() void
-    +stopTracking() void
-    +getCurrentLocation() Location
+    +useGeolocation(boolean enabled) State
   }
   class Location {
-    -double latitude
-    -double longitude
-    -long timestamp
+    -double lat
+    -double lng
+    -double accuracy
   }
   class GeofenceChecker {
     -double preAlertRadius
     -double finalRadius
-    +checkDistance(Location cur, Station target) double
+    +distM(Location a, Location b) double
+    +geofenceLeg(List~Station~ stops, Location cur) Result
     +isPreAlert(double distance) boolean
     +isArrived(double distance) boolean
   }
   class AlertManager {
-    +showPreAlert(Station station) void
-    +showFinalAlert(Station station) void
+    +firePre(Station station) void
+    +fireTransfer(RouteSegment next) void
+    +fireFinal(Station station) void
     +vibrate(int[] pattern) void
+    +speak(String text, boolean soundOn) void
   }
   class Alert {
     -String messageText
@@ -92,11 +94,11 @@ classDiagram
   class ApiClient {
     -String baseUrl
     +request(String endpoint, Map params) String
-    +available() boolean
+    +apiAvailable() boolean
   }
   class StorageManager {
-    +saveRecentSearch(Station station) void
-    +loadRecentSearch() List~Station~
+    +addRecent(Station station) void
+    +removeRecent(String name) void
     +saveSettings(boolean soundOn) void
     +loadSettings() Settings
   }
@@ -108,7 +110,7 @@ classDiagram
   LocationService --> ApiClient : uses
   RouteCalculator --> ApiClient : uses
   RouteCalculator ..> Route : creates
-  Route "1" *-- "1..*" RouteSegment : segments
+  Route "1" *-- "1..*" RouteSegment : legs
   RouteSegment --> Station : board / alight
   NavigationManager --> Route
   NavigationManager --> LocationTracker

@@ -3,18 +3,7 @@
 // ─────────────────────────────────────────────────────────────
 const { useEffect, useRef } = React;
 
-// ── feedback helpers ────────────────────────────────────────
-function vibrate(pattern) { try { navigator.vibrate && navigator.vibrate(pattern); } catch(e){} }
-function speak(text, on) {
-  if (!on) return;
-  try {
-    const s = window.speechSynthesis; if (!s) return;
-    s.cancel();
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = 'ko-KR'; u.rate = 0.92; u.pitch = 1;
-    s.speak(u);
-  } catch(e){}
-}
+// feedback helpers(vibrate, speak)는 geo.jsx에서 전역으로 제공된다.
 
 const TICK_MS = 3000; // simulated time between stops
 
@@ -213,31 +202,43 @@ function GpsStatus({ mode, geo }) {
 }
 
 // ── Progress bar ────────────────────────────────────────────
+// 점은 정류장 인덱스 비율(0~1)로 트랙 위에 절대배치한다 → 정류장 수에 상관없이
+// 항상 바 폭 안에 들어와 화면을 넘치지 않는다. 정류장이 많아 빽빽해지면
+// 핵심 지점(출발·환승·도착·현재·다음)만 점으로 남겨 가독성을 지킨다.
+const BAR_MAX_DOTS = 14;
 function ProgressBar({ barStops, pos }) {
   const n = barStops.length;
+  const frac = i => n > 1 ? i / (n - 1) : 0;
+  const dense = n > BAR_MAX_DOTS;
+  const keep = (s, i) =>
+    !dense || i === 0 || i === n - 1 ||
+    s.board || s.transfer || s.final ||
+    i === pos || i === pos + 1;
   return (
     <div style={{ padding:'22px 24px 8px' }}>
-      <div style={{ position:'relative', height:26, display:'flex', alignItems:'center' }}>
-        <div style={{ position:'absolute', left:6, right:6, height:6, borderRadius:3, background:'rgba(255,255,255,0.18)' }} />
-        <div style={{ position:'absolute', left:6, height:6, borderRadius:3, background:T.gold,
-          width:`calc((100% - 12px) * ${n>1?pos/(n-1):0})`, transition:'width .5s ease' }} />
-        <div style={{ position:'absolute', left:0, right:0, display:'flex', justifyContent:'space-between' }}>
-          {barStops.map((s,i) => {
-            const done = i < pos, here = i === pos;
-            let bg = 'rgba(255,255,255,0.35)';
-            if (done) bg = T.gold;
-            if (s.board) bg = T.green;
-            if (s.final) bg = here?T.red:(done?T.gold:'rgba(255,255,255,0.35)');
-            return (
-              <div key={i} style={{ position:'relative' }}>
-                {here && <div className="ag-ping" style={{ position:'absolute', inset:-7, borderRadius:'50%', background:T.gold, opacity:0.5 }} />}
-                <div style={{ width: here?22:14, height: here?22:14, borderRadius:'50%',
-                  background: here?T.gold:bg, border: s.transfer?`3px solid #fff`:'none',
-                  position:'relative', transition:'all .3s', margin: here?0:4 }} />
-              </div>
-            );
-          })}
-        </div>
+      <div style={{ position:'relative', height:26 }}>
+        <div style={{ position:'absolute', top:'50%', transform:'translateY(-50%)', left:6, right:6, height:6, borderRadius:3, background:'rgba(255,255,255,0.18)' }} />
+        <div style={{ position:'absolute', top:'50%', transform:'translateY(-50%)', left:6, height:6, borderRadius:3, background:T.gold,
+          width:`calc((100% - 12px) * ${frac(pos)})`, transition:'width .5s ease' }} />
+        {barStops.map((s,i) => {
+          if (!keep(s,i)) return null;
+          const done = i < pos, here = i === pos;
+          let bg = 'rgba(255,255,255,0.35)';
+          if (done) bg = T.gold;
+          if (s.board) bg = T.green;
+          if (s.final) bg = here?T.red:(done?T.gold:'rgba(255,255,255,0.35)');
+          const sz = here?22:14;
+          return (
+            <div key={i} style={{ position:'absolute', top:'50%',
+              left:`calc(6px + (100% - 12px) * ${frac(i)})`,
+              transform:'translate(-50%, -50%)', transition:'left .5s ease' }}>
+              {here && <div className="ag-ping" style={{ position:'absolute', inset:-7, borderRadius:'50%', background:T.gold, opacity:0.5 }} />}
+              <div style={{ width:sz, height:sz, borderRadius:'50%',
+                background: here?T.gold:bg, border: s.transfer?`3px solid #fff`:'none',
+                position:'relative', transition:'all .3s' }} />
+            </div>
+          );
+        })}
       </div>
       <div style={{ display:'flex', justifyContent:'space-between', marginTop:8, fontSize:15, fontWeight:800 }}>
         <span style={{ color:T.gold }}>{barStops[0].name}</span>

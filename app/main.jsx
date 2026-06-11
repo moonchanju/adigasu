@@ -135,7 +135,7 @@ function App() {
   let body;
   if (screen === 'region') body = <RegionScreen onSelect={selectRegion} />;
   else if (screen === 'input') body = <InputScreen region={region} origin={origin} dest={dest} recents={regionRecents}
-    onBack={()=>setScreen('region')} onSet={setField} onSearch={doSearch} onRemoveRecent={removeRecent} />;
+    soundOn={soundOn} onBack={()=>setScreen('region')} onSet={setField} onSearch={doSearch} onRemoveRecent={removeRecent} />;
   else if (screen === 'searching') body = <Searching origin={origin && origin.name} dest={dest && dest.name} />;
   else if (screen === 'routes') body = <RoutesScreen origin={origin} dest={dest} routes={routes} note={routeNote}
     onBack={()=>setScreen('input')} onChoose={rt=>{ setRoute(rt); setScreen('nav'); }} />;

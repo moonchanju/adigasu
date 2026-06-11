@@ -4,6 +4,22 @@
 // HTTPS 또는 localhost 에서만 동작한다.
 // ─────────────────────────────────────────────────────────────
 
+// ── 피드백 헬퍼 (촉각·음성) ─────────────────────────────────
+// 안내 화면과 역 선택 등 여러 화면이 공유한다(geo.jsx가 먼저 로드되므로 전역 제공).
+// 진동: navigator.vibrate — 안드로이드 크롬 지원, iOS 사파리는 미지원이라 안전하게 무시된다.
+function vibrate(pattern) { try { navigator.vibrate && navigator.vibrate(pattern); } catch(e){} }
+// 음성: Web Speech API. soundOn(음성 안내 설정)이 켜져 있을 때만 발화한다.
+function speak(text, on) {
+  if (!on) return;
+  try {
+    const s = window.speechSynthesis; if (!s) return;
+    s.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'ko-KR'; u.rate = 0.92; u.pitch = 1;
+    s.speak(u);
+  } catch(e){}
+}
+
 // Haversine 거리(미터). 두 {lat,lng} 사이의 지표면 거리.
 function distM(a, b) {
   if (!a || !b) return Infinity;
@@ -70,4 +86,4 @@ function geofenceLeg(stops, coords) {
   return { nearestIdx, nearestDist, alightDist: distM(coords, alight) };
 }
 
-Object.assign(window, { distM, GEO, useGeolocation, geofenceLeg });
+Object.assign(window, { distM, GEO, useGeolocation, geofenceLeg, vibrate, speak });

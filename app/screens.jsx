@@ -78,7 +78,7 @@ function staticStations(t) {
 }
 
 // ── Search overlay (shared by origin/destination) ───────────
-function SearchPanel({ field, region, recents, onPick, onClose, onRemove }) {
+function SearchPanel({ field, region, recents, soundOn, onPick, onClose, onRemove }) {
   const [q, setQ] = useState('');
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -102,6 +102,13 @@ function SearchPanel({ field, region, recents, onPick, onClose, onRemove }) {
 
   const label = field === 'origin' ? '어디서 타시나요?' : '어디서 내리시나요?';
   const accent = field === 'origin' ? T.green : T.red;
+
+  // 역 선택 시 피드백: 짧은 진동 + (음성 안내 설정 시) 선택 안내 발화
+  function handlePick(p) {
+    vibrate(35);
+    speak(`${p.name}, ${field === 'origin' ? '출발지로' : '도착지로'} 선택했습니다`, soundOn);
+    onPick(p);
+  }
 
   return (
     <div style={{ position:'absolute', inset:0, background:T.paper, zIndex:30, display:'flex', flexDirection:'column' }}>
@@ -132,7 +139,7 @@ function SearchPanel({ field, region, recents, onPick, onClose, onRemove }) {
         )}
         {q.trim() === ''
           ? recents.map((p,i) => (
-              <RecentRow key={p.name||i} text={p.name} onClick={()=>onPick(p)} onRemove={()=>onRemove(p.name)} />
+              <RecentRow key={p.name||i} text={p.name} onClick={()=>handlePick(p)} onRemove={()=>onRemove(p.name)} />
             ))
           : loading
             ? (
@@ -145,7 +152,8 @@ function SearchPanel({ field, region, recents, onPick, onClose, onRemove }) {
             : results.length
               ? results.map((p,i) => (
                   <Row key={p.id||i} icon={p.cls==='subway'?'nav':'pin'} iconColor={accent}
-                    text={p.name} badge={p.cls==='subway'?'🚇':'🚌'} onClick={()=>onPick(p)} />
+                    text={p.name} sub={p.cls==='subway'?'이 위치에서 버스로 안내':undefined}
+                    badge={p.cls==='subway'?'🚇':'🚌'} onClick={()=>handlePick(p)} />
                 ))
               : (
                 <div style={{ textAlign:'center', padding:'48px 30px', color:T.muted }}>
@@ -169,7 +177,7 @@ function SearchPanel({ field, region, recents, onPick, onClose, onRemove }) {
   );
 }
 
-function Row({ icon, iconColor, text, badge, onClick }) {
+function Row({ icon, iconColor, text, sub, badge, onClick }) {
   return (
     // onMouseDown preventDefault: 포커스된 입력창의 blur가 첫 탭을 먹는 것을 막아 단일 탭 선택
     <button onClick={onClick} onMouseDown={e=>e.preventDefault()} style={{
@@ -180,7 +188,10 @@ function Row({ icon, iconColor, text, badge, onClick }) {
       <div style={{ width:42, height:42, borderRadius:21, background:T.paperDeep, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
         <Icon name={icon} size={22} color={iconColor} />
       </div>
-      <span style={{ flex:1, minWidth:0, fontSize:22, fontWeight:700, color:T.ink }}>{text}</span>
+      <div style={{ flex:1, minWidth:0 }}>
+        <span style={{ display:'block', fontSize:22, fontWeight:700, color:T.ink, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{text}</span>
+        {sub && <span style={{ display:'block', fontSize:14, fontWeight:600, color:T.muted, marginTop:2 }}>{sub}</span>}
+      </div>
       {badge && (
         <span aria-label={badge==='🚇'?'지하철':'버스'} title={badge==='🚇'?'지하철':'버스'}
           style={{ flexShrink:0, fontSize:26, lineHeight:1 }}>{badge}</span>
@@ -232,7 +243,7 @@ function RouteField({ value, placeholder, dotColor, icon, onClick }) {
 }
 
 // ── Screen 2: Route input ───────────────────────────────────
-function InputScreen({ region, origin, dest, recents, onBack, onSet, onSearch, onRemoveRecent }) {
+function InputScreen({ region, origin, dest, recents, soundOn, onBack, onSet, onSearch, onRemoveRecent }) {
   const [panel, setPanel] = useState(null); // 'origin' | 'dest' | null
 
   // 출발지·도착지가 같은 곳이면 검색 전에 차단(있으면 id, 없으면 이름으로 비교)
@@ -268,7 +279,7 @@ function InputScreen({ region, origin, dest, recents, onBack, onSet, onSearch, o
 
       {panel && (
         <SearchPanel
-          field={panel} region={region} recents={recents}
+          field={panel} region={region} recents={recents} soundOn={soundOn}
           onClose={()=>setPanel(null)}
           onPick={(p)=>{ onSet(panel, p); setPanel(null); }}
           onRemove={onRemoveRecent}

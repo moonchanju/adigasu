@@ -1,0 +1,65 @@
+@startuml
+!pragma layout smetana
+skinparam defaultFontName "Apple SD Gothic Neo"
+
+class User {
+  userId : String
+  selectedRegion : Region
+}
+class Route {
+  routeId : String
+  totalDistance : Double
+  estimatedTime : Integer
+  currentSegmentIndex : Integer
+  transferCount : Integer
+}
+enum Region {
+  SEOUL
+  INCHEON
+  BUSAN
+  DAEGU
+  GWANGJU
+  DAEJEON
+  ULSAN
+  SEJONG
+}
+class GPS_Sensor {
+  latitude : Double
+  longitude : Double
+  accuracy : Double
+  timestamp : DateTime
+}
+class RouteSegment {
+  segmentIndex : Integer
+  transportType : TransportType
+  lineName : String
+}
+class Station {
+  stationName : String
+  latitude : Double
+  longitude : Double
+  isTransfer : Boolean
+}
+enum TransportType {
+  BUS
+}
+class Alert {
+  alertLevel : AlertLevel
+  vibrationPattern : String
+  messageText : String
+}
+enum AlertLevel {
+  PRE_ALERT
+  FINAL_ALERT
+}
+
+User "1" -- "0..*" Route
+User "1" -- "1" Region
+User "1" -- "1" GPS_Sensor
+Route "1" *-- "1..*" RouteSegment
+RouteSegment "1" -- "2..*" Station
+RouteSegment -- TransportType
+GPS_Sensor ..> Station
+Station "1" -- "0..*" Alert
+Alert -- AlertLevel
+@enduml

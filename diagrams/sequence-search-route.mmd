@@ -1,0 +1,21 @@
+sequenceDiagram
+  actor User
+  participant UI as RouteSearchUI
+  participant LS as LocationService
+  participant RC as RouteCalculator
+  participant API as ApiClient
+  participant SM as StorageManager
+  User->>UI: 출발지/도착지 입력
+  UI->>LS: searchStations(keyword)
+  LS->>API: request(searchStation, params)
+  API-->>LS: 좌표 포함 역 후보 목록
+  LS-->>UI: List~Station~
+  UI->>UI: showAutoComplete(candidates)
+  User->>UI: 역 선택 (origin, dest 확정)
+  UI->>RC: searchRoutes(origin, dest)
+  RC->>API: request(searchPubTransPathT, params)
+  API-->>RC: 경로 데이터
+  RC->>RC: sortByTransfer(routes)
+  RC-->>UI: List~Route~
+  UI->>SM: saveRecentSearch(station)
+  UI-->>User: 추천/대체 경로 표시

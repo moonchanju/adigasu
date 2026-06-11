@@ -1,0 +1,20 @@
+sequenceDiagram
+  participant LT as LocationTracker
+  participant NM as NavigationManager
+  participant GC as GeofenceChecker
+  participant AM as AlertManager
+  actor User
+  LT-->>NM: onLocationUpdate(location)
+  NM->>GC: checkDistance(cur, alightStation)
+  GC-->>NM: distance
+  alt 하차역 약 450m 전 (isPreAlert == true)
+    NM->>AM: showPreAlert(station)
+    AM->>AM: vibrate(예고 패턴)
+    AM-->>User: 바텀 시트 슬라이드 업 + 예고 진동
+  end
+  alt 목적지 도착 (isArrived == true)
+    NM->>AM: showFinalAlert(station)
+    AM->>AM: vibrate(연속 패턴)
+    AM-->>User: 화면 색상 반전 + 강력한 연속 진동
+    User-->>AM: 확인 버튼 클릭
+  end

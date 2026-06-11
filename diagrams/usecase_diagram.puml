@@ -1,0 +1,44 @@
+@startuml
+!pragma layout smetana
+left to right direction
+skinparam defaultFontName "Apple SD Gothic Neo"
+skinparam packageStyle rectangle
+
+actor "User\n(어르신)" as User
+actor "GPS Sensor" as GPS
+actor "System" as Sys
+actor "ODsay API" as ODsay
+
+rectangle "어디가수? (지상 대중교통 보조 시스템)" {
+  usecase "Select Region\n(광역시)" as UC_region
+  usecase "Search & Select Route" as UC_search
+  usecase "Input Origin /\nDestination" as UC_input
+  usecase "Calculate Route\n(지상교통 우선)" as UC_calc
+  usecase "Start Navigation" as UC_start
+  usecase "Track Real-time\nLocation" as UC_track
+  usecase "Display Linear\nProgress Bar" as UC_bar
+  usecase "Provide Arrival Alert\n(진동 + 시각)" as UC_alert
+  usecase "Pre-Alert\n(약 450m 전)" as UC_pre
+  usecase "Final Alert\n(도착)" as UC_final
+  usecase "Automatic Route\nUpdate" as UC_auto
+}
+
+User -- UC_region
+User -- UC_search
+User -- UC_start
+GPS -- UC_track
+Sys -- UC_track
+Sys -- UC_alert
+Sys -- UC_auto
+Sys -- UC_calc
+ODsay -- UC_calc
+
+UC_search ..> UC_input : <<include>>
+UC_search ..> UC_calc : <<include>>
+UC_start ..> UC_track : <<include>>
+UC_track ..> UC_bar : <<include>>
+UC_alert ..> UC_pre : <<include>>
+UC_alert ..> UC_final : <<include>>
+UC_alert ..> UC_track : <<extend>>
+UC_auto ..> UC_track : <<extend>>
+@enduml

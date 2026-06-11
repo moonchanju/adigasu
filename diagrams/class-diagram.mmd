@@ -1,0 +1,121 @@
+classDiagram
+  class RegionSelector {
+    -List~String~ regionList
+    -String selectedRegion
+    +showRegions() void
+    +selectRegion(String region) void
+  }
+  class RouteSearchUI {
+    -TextField originField
+    -TextField destinationField
+    -List~String~ recentList
+    +onInput(String keyword) void
+    +showAutoComplete(List~Station~ candidates) void
+    +requestRoute(Station origin, Station dest) void
+  }
+  class LocationService {
+    -ApiClient apiClient
+    +searchStations(String keyword, String region) List~Station~
+  }
+  class RouteCalculator {
+    -ApiClient apiClient
+    +searchRoutes(Station origin, Station dest) List~Route~
+    +sortByTransfer(List~Route~ routes) List~Route~
+  }
+  class Route {
+    -double totalDistance
+    -int totalTime
+    -int transferCount
+    -int currentSegmentIndex
+    -List~RouteSegment~ segments
+    +getSegmentIndex() int
+    +moveToNextSegment() void
+    +isLastSegment() boolean
+  }
+  class RouteSegment {
+    -String lineName
+    -String boardStation
+    -Station alightStation
+    -int stationCount
+    +getAlightStation() Station
+  }
+  class Station {
+    -String stationId
+    -String stationName
+    -double latitude
+    -double longitude
+    -String region
+    +getName() String
+    +getLat() double
+    +getLng() double
+  }
+  class NavigationManager {
+    -Route route
+    -LocationTracker tracker
+    -GeofenceChecker geofence
+    -AlertManager alertManager
+    +startNavigation() void
+    +onLocationUpdate(Location loc) void
+    +updateProgress() void
+    +stopNavigation() void
+  }
+  class LocationTracker {
+    -int watchId
+    -Location currentLocation
+    +startTracking() void
+    +stopTracking() void
+    +getCurrentLocation() Location
+  }
+  class Location {
+    -double latitude
+    -double longitude
+    -long timestamp
+  }
+  class GeofenceChecker {
+    -double preAlertRadius
+    -double finalRadius
+    +checkDistance(Location cur, Station target) double
+    +isPreAlert(double distance) boolean
+    +isArrived(double distance) boolean
+  }
+  class AlertManager {
+    +showPreAlert(Station station) void
+    +showFinalAlert(Station station) void
+    +vibrate(int[] pattern) void
+  }
+  class Alert {
+    -String messageText
+    -int[] vibrationPattern
+    -String type
+    +getMessage() String
+  }
+  class ApiClient {
+    -String baseUrl
+    +request(String endpoint, Map params) String
+    +available() boolean
+  }
+  class StorageManager {
+    +saveRecentSearch(Station station) void
+    +loadRecentSearch() List~Station~
+    +saveSettings(boolean soundOn) void
+    +loadSettings() Settings
+  }
+
+  RegionSelector --> RouteSearchUI : navigates
+  RouteSearchUI ..> LocationService : uses
+  RouteSearchUI ..> RouteCalculator : uses
+  RouteSearchUI ..> StorageManager : uses
+  LocationService --> ApiClient : uses
+  RouteCalculator --> ApiClient : uses
+  RouteCalculator ..> Route : creates
+  Route "1" *-- "1..*" RouteSegment : segments
+  RouteSegment --> Station : board / alight
+  NavigationManager --> Route
+  NavigationManager --> LocationTracker
+  NavigationManager --> GeofenceChecker
+  NavigationManager --> AlertManager
+  LocationTracker --> Location
+  GeofenceChecker ..> Station
+  GeofenceChecker ..> Location
+  AlertManager --> Alert
+  StorageManager ..> Station

@@ -25,12 +25,14 @@ const T = {
 
 // ── Regions (ground transit service areas) ──────────────────
 const REGIONS = [
-  { id:'daegu',   name:'대구', sub:'지상 버스 · 시내버스', glyph:'팔', tone:T.ink,   live:true  },
-  { id:'busan',   name:'부산', sub:'지상 버스 · 마을버스', glyph:'해', tone:'#256C8A', live:true  },
-  { id:'gwangju', name:'광주', sub:'지상 버스 · 간선버스', glyph:'빛', tone:'#3F6B3A', live:true  },
-  { id:'daejeon', name:'대전', sub:'지상 버스 · 급행버스', glyph:'한', tone:'#8A5A23', live:true  },
-  { id:'seoul',   name:'서울', sub:'준비 중',            glyph:'서', tone:T.muted,  live:false },
-  { id:'incheon', name:'인천', sub:'준비 중',            glyph:'인', tone:T.muted,  live:false },
+  { id:'seoul',   name:'서울', glyph:'서', tone:'#1B2A41', live:true },
+  { id:'incheon', name:'인천', glyph:'인', tone:'#2E6CB5', live:true },
+  { id:'busan',   name:'부산', glyph:'해', tone:'#256C8A', live:true },
+  { id:'daegu',   name:'대구', glyph:'팔', tone:'#A14736', live:true },
+  { id:'gwangju', name:'광주', glyph:'빛', tone:'#3F6B3A', live:true },
+  { id:'daejeon', name:'대전', glyph:'한', tone:'#8A5A23', live:true },
+  { id:'ulsan',   name:'울산', glyph:'울', tone:'#6B4FA0', live:true },
+  { id:'sejong',  name:'세종', glyph:'세', tone:'#2E7D6B', live:true },
 ];
 
 // ── Place dictionary for autocomplete (대구) ────────────────
@@ -75,6 +77,26 @@ const ROUTES = [
     ],
   },
 ];
+
+// ── Station coordinates (대구) ──────────────────────────────
+// NOTE: 데모용 근사 좌표. 실서비스에서는 ODsay 정류장 API의 위경도로 교체한다.
+// 지오펜싱(거리 계산)·실시간 GPS 자동 진행의 기준 데이터.
+const COORDS = {
+  '수성못':        { lat:35.8240, lng:128.6190 },
+  '들안길':        { lat:35.8330, lng:128.6210 },
+  '수성구민운동장': { lat:35.8400, lng:128.6230 },
+  '수성시장':      { lat:35.8470, lng:128.6155 },
+  '경대병원':      { lat:35.8550, lng:128.6080 },
+  '수성구청':      { lat:35.8570, lng:128.6260 },
+  '황금네거리':    { lat:35.8400, lng:128.6320 },
+  '범어네거리':    { lat:35.8570, lng:128.6360 },
+  '만촌역':        { lat:35.8610, lng:128.6470 },
+  '동촌':          { lat:35.8780, lng:128.6520 },
+  '어린이회관':    { lat:35.8480, lng:128.6360 },
+  'MBC네거리':     { lat:35.8600, lng:128.6300 },
+  '동구청':        { lat:35.8750, lng:128.6380 },
+  '동대구역':      { lat:35.8794, lng:128.6286 },
+};
 
 // Flatten a route into a single ordered stop sequence with metadata.
 // Each entry: { name, legIndex, line, color, isTransfer (alight of a non-last leg),
@@ -132,4 +154,4 @@ function Icon({ name, size = 24, color = 'currentColor', stroke = 2.4 }) {
   );
 }
 
-Object.assign(window, { T, REGIONS, PLACES, ROUTES, flattenJourney, Icon });
+Object.assign(window, { T, REGIONS, PLACES, ROUTES, COORDS, flattenJourney, Icon });

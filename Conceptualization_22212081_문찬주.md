@@ -61,7 +61,7 @@
 
 #### Use Case #3 : Start Navigation
 - Actor: User
-- Description: 사용자가 탑승 시작 버튼을 누르면 위치 추적과 안내가 시작된다.
+- Description: 사용자가 추천 경로를 선택하면 위치 추적과 안내가 시작된다.
 
 #### Use Case #4 : Track Location
 - Actor: System / Device
@@ -113,7 +113,7 @@
 | 항목 | 내용 |
 |------|------|
 | Purpose | 안내 시작 |
-| Approach | 버튼 클릭 → 위치 추적 시작 |
+| Approach | 경로 선택 → 위치 추적 시작 |
 | Dynamics | 이동 시작 시 |
 | Goals | 정확한 안내 시작 |
 

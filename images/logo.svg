@@ -1,0 +1,26 @@
+<svg width="96" height="96" viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="어디가수 로고">
+  <defs>
+    <linearGradient id="ag-gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#F7C25A"/>
+      <stop offset="1" stop-color="#E0A12A"/>
+    </linearGradient>
+  </defs>
+  <!-- badge -->
+  <rect x="4" y="4" width="88" height="88" rx="26" fill="url(#ag-gold)"/>
+  <rect x="4" y="4" width="88" height="42" rx="26" fill="#ffffff" opacity="0.10"/>
+  <!-- friendly front-view bus -->
+  <g>
+    <rect x="27" y="29" width="42" height="43" rx="12" fill="#FFFDF8"/>
+    <rect x="33" y="36" width="12" height="12" rx="3.5" fill="#1B2A41"/>
+    <rect x="51" y="36" width="12" height="12" rx="3.5" fill="#1B2A41"/>
+    <rect x="31" y="60" width="34" height="6" rx="3" fill="#1B2A41"/>
+    <circle cx="36" cy="72" r="5" fill="#1B2A41"/>
+    <circle cx="60" cy="72" r="5" fill="#1B2A41"/>
+  </g>
+  <!-- destination pin (alert) -->
+  <g>
+    <path d="M70 17.5c-6 0-10.5 4.5-10.5 10.5 0 7 10.5 15.5 10.5 15.5S80.5 35 80.5 28c0-6-4.5-10.5-10.5-10.5z"
+      fill="#D8392C" stroke="#FFFDF8" stroke-width="3" stroke-linejoin="round"/>
+    <circle cx="70" cy="28" r="3.8" fill="#FFFDF8"/>
+  </g>
+</svg>

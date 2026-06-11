@@ -3,12 +3,29 @@
 // ─────────────────────────────────────────────────────────────
 const { useState, useMemo } = React;
 
-// Bell mark (logo glyph) — simple bell silhouette
-function BellMark({ size = 40, color = T.ink }) {
+// 브랜드 마크 — 친근한 정면 버스 + 목적지 핀 (images/logo.svg 와 동일)
+function BrandMark({ size = 60 }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 48 48" style={{ display:'block' }}>
-      <path fill={color} d="M24 4c-1.4 0-2.5 1-2.7 2.4C15.6 7.7 12 12.7 12 19v8l-3.4 4.2c-.9 1.1-.1 2.8 1.3 2.8h28.2c1.4 0 2.2-1.7 1.3-2.8L36 27v-8c0-6.3-3.6-11.3-9.3-12.6C26.5 5 25.4 4 24 4z"/>
-      <path fill={color} d="M19 38a5 5 0 0010 0h-3.2a1.8 1.8 0 01-3.6 0H19z"/>
+    <svg width={size} height={size} viewBox="0 0 96 96" style={{ display:'block' }}>
+      <defs>
+        <linearGradient id="agGold" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#F7C25A" /><stop offset="1" stopColor="#E0A12A" />
+        </linearGradient>
+      </defs>
+      <rect x="4" y="4" width="88" height="88" rx="26" fill="url(#agGold)" />
+      <rect x="4" y="4" width="88" height="42" rx="26" fill="#fff" opacity="0.10" />
+      <g>
+        <rect x="27" y="29" width="42" height="43" rx="12" fill="#FFFDF8" />
+        <rect x="33" y="36" width="12" height="12" rx="3.5" fill="#1B2A41" />
+        <rect x="51" y="36" width="12" height="12" rx="3.5" fill="#1B2A41" />
+        <rect x="31" y="60" width="34" height="6" rx="3" fill="#1B2A41" />
+        <circle cx="36" cy="72" r="5" fill="#1B2A41" /><circle cx="60" cy="72" r="5" fill="#1B2A41" />
+      </g>
+      <g>
+        <path d="M70 17.5c-6 0-10.5 4.5-10.5 10.5 0 7 10.5 15.5 10.5 15.5S80.5 35 80.5 28c0-6-4.5-10.5-10.5-10.5z"
+          fill="#D8392C" stroke="#FFFDF8" strokeWidth="3" strokeLinejoin="round" />
+        <circle cx="70" cy="28" r="3.8" fill="#FFFDF8" />
+      </g>
     </svg>
   );
 }
@@ -18,12 +35,8 @@ function RegionScreen({ onSelect }) {
   return (
     <div style={{ background:T.paper, minHeight:'100%', display:'flex', flexDirection:'column' }}>
       <div style={{ padding:'28px 22px 14px', display:'flex', alignItems:'center', gap:14 }}>
-        <div style={{
-          width:60, height:60, borderRadius:18, background:T.gold,
-          display:'flex', alignItems:'center', justifyContent:'center',
-          boxShadow:'0 6px 16px rgba(217,150,28,0.4)',
-        }}>
-          <BellMark size={36} color={T.ink} />
+        <div style={{ borderRadius:17, lineHeight:0, boxShadow:'0 6px 16px rgba(217,150,28,0.38)' }}>
+          <BrandMark size={62} />
         </div>
         <div>
           <div style={{ fontSize:34, fontWeight:800, color:T.ink, letterSpacing:'-0.03em', lineHeight:1 }}>어디가수?</div>
@@ -42,13 +55,11 @@ function RegionScreen({ onSelect }) {
             boxShadow:r.live?T.shadow:'none', fontFamily:'inherit', width:'100%',
           }}>
             <div style={{
-              width:62, height:62, borderRadius:18, flexShrink:0,
-              background:r.tone, color:'#fff', display:'flex', alignItems:'center', justifyContent:'center',
-              fontSize:30, fontWeight:800,
-            }}>{r.glyph}</div>
+              width:66, height:66, borderRadius:18, flexShrink:0, overflow:'hidden',
+              background:r.tone, display:'flex', alignItems:'flex-end', justifyContent:'center',
+            }}><RegionArt id={r.id} color="#fff" style={{ width:'100%', height:'86%' }} /></div>
             <div style={{ flex:1, minWidth:0 }}>
               <div style={{ fontSize:28, fontWeight:800, color:T.ink, lineHeight:1.1 }}>{r.name}</div>
-              <div style={{ fontSize:16, fontWeight:600, color:T.muted, marginTop:3 }}>{r.sub}</div>
             </div>
             {r.live
               ? <Icon name="chevron" size={26} color={T.muted} />
@@ -60,14 +71,35 @@ function RegionScreen({ onSelect }) {
   );
 }
 
+// 데모 폴백: 정적 PLACES를 역 객체로 변환
+function staticStations(t) {
+  return PLACES.filter(p => p.includes(t)).slice(0, 8)
+    .map(name => ({ name, lat: (COORDS[name]||{}).lat, lng: (COORDS[name]||{}).lng, cls:'bus' }));
+}
+
 // ── Search overlay (shared by origin/destination) ───────────
-function SearchPanel({ field, region, recents, onPick, onClose }) {
+function SearchPanel({ field, region, recents, onPick, onClose, onRemove }) {
   const [q, setQ] = useState('');
-  const results = useMemo(() => {
+  const [results, setResults] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [demo, setDemo] = useState(false);   // 폴백(데모 데이터) 사용 중 여부
+
+  // 입력 디바운스 후 프록시 검색 → 실패 시 정적 데이터로 폴백
+  useEffect(() => {
     const t = q.trim();
-    if (!t) return [];
-    return PLACES.filter(p => p.includes(t)).slice(0, 8);
+    if (!t) { setResults([]); setLoading(false); return; }
+    setLoading(true);
+    const id = setTimeout(async () => {
+      try {
+        const list = await searchStations(t, region);
+        setResults(list); setDemo(false);
+      } catch (e) {
+        setResults(staticStations(t)); setDemo(true);
+      } finally { setLoading(false); }
+    }, 280);
+    return () => clearTimeout(id);
   }, [q]);
+
   const label = field === 'origin' ? '어디서 타시나요?' : '어디서 내리시나요?';
   const accent = field === 'origin' ? T.green : T.red;
 
@@ -100,18 +132,32 @@ function SearchPanel({ field, region, recents, onPick, onClose }) {
         )}
         {q.trim() === ''
           ? recents.map((p,i) => (
-              <Row key={i} icon="history" iconColor={T.muted} text={p} onClick={()=>onPick(p)} />
+              <RecentRow key={p.name||i} text={p.name} onClick={()=>onPick(p)} onRemove={()=>onRemove(p.name)} />
             ))
-          : results.length
-            ? results.map((p,i) => (
-                <Row key={i} icon="pin" iconColor={accent} text={p} q={q} onClick={()=>onPick(p)} />
-              ))
-            : (
-              <div style={{ textAlign:'center', padding:'48px 30px', color:T.muted }}>
-                <div style={{ fontSize:21, fontWeight:800, color:T.inkSoft }}>검색 결과가 없습니다</div>
-                <div style={{ fontSize:16, fontWeight:600, marginTop:8 }}>다른 이름으로 검색해 보세요</div>
+          : loading
+            ? (
+              <div style={{ textAlign:'center', padding:'40px 30px', color:T.muted }}>
+                <div className="ag-spin" style={{ width:38, height:38, margin:'0 auto 14px', borderRadius:'50%',
+                  border:`5px solid ${T.line}`, borderTopColor:accent }} />
+                <div style={{ fontSize:17, fontWeight:700 }}>검색 중…</div>
               </div>
-            )}
+            )
+            : results.length
+              ? results.map((p,i) => (
+                  <Row key={p.id||i} icon={p.cls==='subway'?'nav':'pin'} iconColor={accent}
+                    text={p.name} badge={p.cls==='subway'?'🚇':'🚌'} onClick={()=>onPick(p)} />
+                ))
+              : (
+                <div style={{ textAlign:'center', padding:'48px 30px', color:T.muted }}>
+                  <div style={{ fontSize:21, fontWeight:800, color:T.inkSoft }}>검색 결과가 없습니다</div>
+                  <div style={{ fontSize:16, fontWeight:600, marginTop:8 }}>다른 이름으로 검색해 보세요</div>
+                </div>
+              )}
+        {demo && results.length > 0 && (
+          <div style={{ textAlign:'center', padding:'10px 30px 4px', fontSize:13, fontWeight:700, color:T.muted }}>
+            · 데모 데이터(대구) — ODsay 키 설정 시 실데이터로 전환 ·
+          </div>
+        )}
         {q.trim() === '' && recents.length === 0 && (
           <div style={{ textAlign:'center', padding:'56px 30px', color:T.muted }}>
             <div style={{ fontSize:20, fontWeight:800, color:T.inkSoft }}>최근 검색 기록이 없습니다</div>
@@ -123,9 +169,10 @@ function SearchPanel({ field, region, recents, onPick, onClose }) {
   );
 }
 
-function Row({ icon, iconColor, text, q, onClick }) {
+function Row({ icon, iconColor, text, badge, onClick }) {
   return (
-    <button onClick={onClick} style={{
+    // onMouseDown preventDefault: 포커스된 입력창의 blur가 첫 탭을 먹는 것을 막아 단일 탭 선택
+    <button onClick={onClick} onMouseDown={e=>e.preventDefault()} style={{
       width:'100%', display:'flex', alignItems:'center', gap:16, padding:'16px 22px',
       background:'none', border:'none', borderBottom:`1px solid ${T.line}`, cursor:'pointer',
       textAlign:'left', fontFamily:'inherit',
@@ -133,17 +180,42 @@ function Row({ icon, iconColor, text, q, onClick }) {
       <div style={{ width:42, height:42, borderRadius:21, background:T.paperDeep, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
         <Icon name={icon} size={22} color={iconColor} />
       </div>
-      <span style={{ fontSize:22, fontWeight:700, color:T.ink }}>{text}</span>
+      <span style={{ flex:1, minWidth:0, fontSize:22, fontWeight:700, color:T.ink }}>{text}</span>
+      {badge && (
+        <span aria-label={badge==='🚇'?'지하철':'버스'} title={badge==='🚇'?'지하철':'버스'}
+          style={{ flexShrink:0, fontSize:26, lineHeight:1 }}>{badge}</span>
+      )}
     </button>
   );
 }
 
-// ── Screen 2: Route input ───────────────────────────────────
-function InputScreen({ region, origin, dest, recents, onBack, onSet, onSearch }) {
-  const [panel, setPanel] = useState(null); // 'origin' | 'dest' | null
+// 최근 검색 행 — 본문(선택) + 삭제(X) 두 버튼 분리 (버튼 중첩 회피)
+function RecentRow({ text, onClick, onRemove }) {
+  return (
+    <div style={{ display:'flex', alignItems:'center', borderBottom:`1px solid ${T.line}` }}>
+      <button onClick={onClick} onMouseDown={e=>e.preventDefault()} style={{
+        flex:1, minWidth:0, display:'flex', alignItems:'center', gap:16, padding:'16px 8px 16px 22px',
+        background:'none', border:'none', cursor:'pointer', textAlign:'left', fontFamily:'inherit',
+      }}>
+        <div style={{ width:42, height:42, borderRadius:21, background:T.paperDeep, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+          <Icon name="history" size={22} color={T.muted} />
+        </div>
+        <span style={{ flex:1, minWidth:0, fontSize:22, fontWeight:700, color:T.ink, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{text}</span>
+      </button>
+      <button onClick={onRemove} onMouseDown={e=>e.preventDefault()} aria-label={`${text} 삭제`} style={{
+        flexShrink:0, padding:'16px 20px', background:'none', border:'none', cursor:'pointer',
+        display:'flex', alignItems:'center', justifyContent:'center',
+      }}>
+        <Icon name="x" size={22} color={T.muted} />
+      </button>
+    </div>
+  );
+}
 
-  const Field = ({ field, value, placeholder, dotColor, icon }) => (
-    <button onClick={()=>setPanel(field)} style={{
+// 출발/도착 입력 필드 — 모듈 레벨 고정 컴포넌트(매 렌더 remount 방지 → 단일 클릭 동작)
+function RouteField({ value, placeholder, dotColor, icon, onClick }) {
+  return (
+    <button onClick={onClick} style={{
       width:'100%', display:'flex', alignItems:'center', gap:16, background:T.surface,
       border:`2px solid ${value?dotColor:T.line}`, borderRadius:20, padding:'20px 20px',
       cursor:'pointer', boxShadow:T.shadow, textAlign:'left', fontFamily:'inherit',
@@ -153,23 +225,45 @@ function InputScreen({ region, origin, dest, recents, onBack, onSet, onSearch })
         <Icon name={icon} size={24} />
       </div>
       <span style={{ fontSize:24, fontWeight:800, color:value?T.ink:T.muted }}>
-        {value || placeholder}
+        {(value && value.name) || placeholder}
       </span>
     </button>
   );
+}
+
+// ── Screen 2: Route input ───────────────────────────────────
+function InputScreen({ region, origin, dest, recents, onBack, onSet, onSearch, onRemoveRecent }) {
+  const [panel, setPanel] = useState(null); // 'origin' | 'dest' | null
+
+  // 출발지·도착지가 같은 곳이면 검색 전에 차단(있으면 id, 없으면 이름으로 비교)
+  const sameSpot = origin && dest &&
+    (origin.id && dest.id ? origin.id === dest.id : origin.name === dest.name);
 
   return (
     <div style={{ background:T.paper, minHeight:'100%', display:'flex', flexDirection:'column', position:'relative' }}>
-      <TopBar title={`${region.name} 경로 찾기`} onBack={onBack} />
+      {/* 지역 대표 이미지가 반투명하게 깔린 헤더 */}
+      <div style={{ position:'relative', background:region.tone, overflow:'hidden' }}>
+        <div aria-hidden style={{ position:'absolute', right:-4, top:6, bottom:-6, width:165,
+          opacity:0.22, color:'#fff', pointerEvents:'none', display:'flex', alignItems:'flex-end' }}>
+          <RegionArt id={region.id} color="#fff" style={{ width:'100%', height:'100%' }} />
+        </div>
+        <TopBar title={`${region.name} 경로 찾기`} onBack={onBack} bg="transparent" />
+      </div>
 
       <div style={{ padding:'20px 18px', display:'flex', flexDirection:'column', gap:14 }}>
-        <Field field="origin" value={origin} placeholder="출발지를 입력하세요" dotColor={T.green} icon="pin" />
-        <Field field="dest"   value={dest}   placeholder="도착지를 입력하세요" dotColor={T.red}   icon="nav" />
+        <RouteField value={origin} placeholder="출발지를 입력하세요" dotColor={T.green} icon="pin" onClick={()=>setPanel('origin')} />
+        <RouteField value={dest}   placeholder="도착지를 입력하세요" dotColor={T.red}   icon="nav" onClick={()=>setPanel('dest')} />
+        {sameSpot && (
+          <div style={{ display:'flex', alignItems:'center', gap:8, padding:'2px 4px',
+            color:T.red, fontSize:16, fontWeight:700 }}>
+            <Icon name="alert" size={20} color={T.red} /> 출발지와 도착지가 같아요. 다른 곳을 선택해 주세요.
+          </div>
+        )}
       </div>
 
       <div style={{ flex:1 }} />
       <div style={{ padding:'18px 18px calc(18px + env(safe-area-inset-bottom))' }}>
-        <PrimaryButton icon="search" disabled={!origin || !dest} onClick={onSearch}>경로 찾기</PrimaryButton>
+        <PrimaryButton icon="search" disabled={!origin || !dest || sameSpot} onClick={onSearch}>경로 찾기</PrimaryButton>
       </div>
 
       {panel && (
@@ -177,6 +271,7 @@ function InputScreen({ region, origin, dest, recents, onBack, onSet, onSearch })
           field={panel} region={region} recents={recents}
           onClose={()=>setPanel(null)}
           onPick={(p)=>{ onSet(panel, p); setPanel(null); }}
+          onRemove={onRemoveRecent}
         />
       )}
     </div>
@@ -184,12 +279,41 @@ function InputScreen({ region, origin, dest, recents, onBack, onSet, onSearch })
 }
 
 // ── Screen 3: Route recommendation ──────────────────────────
-function RoutesScreen({ origin, dest, onBack, onChoose }) {
+// 경로 화면 빈 상태 메시지 (상황별)
+const ROUTE_EMPTY = {
+  too_close: { title:'출발지와 도착지가 너무 가까워요', sub:'조금 더 떨어진 곳으로 다시 검색해 보세요' },
+  no_coords: { title:'위치 정보를 찾지 못했어요',       sub:'출발지·도착지를 검색해서 다시 선택해 주세요' },
+  error:     { title:'경로를 찾지 못했어요',             sub:'출발지·도착지를 바꿔 다시 검색해 보세요' },
+};
+
+function RoutesScreen({ origin, dest, routes, note, onBack, onChoose }) {
+  const o = (origin && origin.name) || origin, d = (dest && dest.name) || dest;
+  const empty = ROUTE_EMPTY[note] || ROUTE_EMPTY.error;
   return (
     <div style={{ background:T.paper, minHeight:'100%', display:'flex', flexDirection:'column' }}>
-      <TopBar title={`${origin} → ${dest}`} subtitle="환승 적은 순" onBack={onBack} />
+      <TopBar title={`${o} → ${d}`} subtitle="환승 적은 순" onBack={onBack} />
       <div style={{ padding:'18px 18px 26px', display:'flex', flexDirection:'column', gap:16 }}>
-        {ROUTES.map(rt => <RouteCard key={rt.id} rt={rt} onChoose={()=>onChoose(rt)} />)}
+        {note === 'demo' && (
+          <div style={{ background:'#FCEAD0', color:T.goldDeep, borderRadius:16, padding:'12px 16px',
+            fontSize:15, fontWeight:700, textAlign:'center' }}>
+            데모 데이터(대구) · ODsay 키 설정 시 실제 경로로 전환됩니다
+          </div>
+        )}
+        {routes && routes.length
+          ? routes.map(rt => <RouteCard key={rt.id} rt={rt} onChoose={()=>onChoose(rt)} />)
+          : (
+            <div style={{ textAlign:'center', padding:'52px 30px', color:T.muted }}>
+              <div style={{ width:84, height:84, borderRadius:'50%', background:T.paperDeep, margin:'0 auto 20px',
+                display:'flex', alignItems:'center', justifyContent:'center' }}>
+                <Icon name="search" size={40} color={T.muted} />
+              </div>
+              <div style={{ fontSize:21, fontWeight:800, color:T.inkSoft }}>{empty.title}</div>
+              <div style={{ fontSize:16, fontWeight:600, marginTop:8 }}>{empty.sub}</div>
+              <div style={{ marginTop:28 }}>
+                <PrimaryButton tone="ink" icon="back" onClick={onBack}>다시 입력하기</PrimaryButton>
+              </div>
+            </div>
+          )}
       </div>
     </div>
   );
@@ -240,4 +364,4 @@ function RouteCard({ rt, onChoose }) {
   );
 }
 
-Object.assign(window, { RegionScreen, InputScreen, RoutesScreen, BellMark });
+Object.assign(window, { RegionScreen, InputScreen, RoutesScreen, BrandMark });

@@ -42,7 +42,9 @@ function NavScreen({ route, soundOn, onToggleSound, onExit, onArrive }) {
   const [stopIdx, setStopIdx] = useState(0);   // index within current leg
   const [phase, setPhase] = useState('riding'); // riding | preAlert | transfer | finalAlert | done
   const [paused, setPaused] = useState(false);
+  const [mode, setMode] = useState('gps');     // 'gps' (실시간 위치) | 'sim' (데모)
   const preFired = useRef(-1);
+  const geo = useGeolocation(mode === 'gps');  // 실시간 GPS 구독 (gps 모드일 때만)
 
   const leg = route.legs[legIdx];
   const alightIdx = leg.stops.length - 1;
@@ -56,34 +58,47 @@ function NavScreen({ route, soundOn, onToggleSound, onExit, onArrive }) {
   const totalRemain = (barStops.length - 1) - barPos;
   const minsLeft = Math.max(1, Math.round(totalRemain * (route.durationMin / (barStops.length - 1))));
 
-  // advance one stop
-  function advance() {
+  // 현재 leg 안에서 target 정류장 인덱스까지 진행시키고, 임계 도달 시 알림 발생.
+  // GPS(거리 기반)와 데모(타이머·버튼) 양쪽이 공유하는 단일 진행 함수.
+  function arriveAt(target) {
     setStopIdx(prev => {
-      const next = prev + 1;
-      const rem = alightIdx - next;
+      if (target <= prev) return prev;          // 뒤로/제자리 이동 무시
+      const idx = Math.min(target, alightIdx);
+      const rem = alightIdx - idx;
       if (rem <= 0) {
         if (isLastLeg) { setPhase('finalAlert'); fireFinal(); }
         else { setPhase('transfer'); fireTransfer(); }
         return alightIdx;
       }
-      if (rem === 1 && preFired.current !== legIdx) {
+      if (rem <= 1 && preFired.current !== legIdx) {
         preFired.current = legIdx;
         setPhase('preAlert'); firePre();
       }
-      return next;
+      return idx;
     });
   }
+  function advance() { arriveAt(stopIdx + 1); }  // 데모: 한 정류장 전진
 
   function firePre()   { vibrate([200,100,200]); speak(`곧 내리세요. 다음 정류장은 ${alightName} 입니다.`, soundOn); }
   function fireTransfer(){ const nl = route.legs[legIdx+1]; vibrate([300,120,300]); speak(`환승입니다. ${nl.line}번 버스로 갈아타세요.`, soundOn); }
   function fireFinal()  { vibrate([400,150,400,150,500]); speak(`지금 내리세요! ${alightName} 입니다.`, soundOn); }
 
-  // auto timer (paused during alerts)
+  // ── GPS 엔진: 실시간 위치 → 지오펜싱 → 진행/알림 ──────────────
   useEffect(() => {
-    if (phase !== 'riding' || paused) return;
+    if (mode !== 'gps' || phase !== 'riding' || !geo.coords) return;
+    const g = geofenceLeg(leg.stops, geo.coords);
+    if (!g) return;
+    if (g.alightDist < GEO.ARRIVE_R) { arriveAt(alightIdx); return; }          // 하차역 도착
+    if (g.alightDist < GEO.PRE_R)    { arriveAt(Math.max(stopIdx, alightIdx - 1)); return; } // 곧 내리세요
+    if (g.nearestDist < GEO.ARRIVE_R && g.nearestIdx > stopIdx) arriveAt(g.nearestIdx); // 중간 정류장 통과
+  }, [geo.coords, mode, phase, stopIdx, legIdx]);
+
+  // ── 데모 모드 타이머 (이동 없이 흐름 확인용) ─────────────────
+  useEffect(() => {
+    if (mode !== 'sim' || phase !== 'riding' || paused) return;
     const id = setTimeout(advance, TICK_MS);
     return () => clearTimeout(id);
-  }, [phase, paused, stopIdx, legIdx]);
+  }, [mode, phase, paused, stopIdx, legIdx]);
 
   function dismissPre() { setPhase('riding'); }
   function doTransfer() {
@@ -125,11 +140,16 @@ function NavScreen({ route, soundOn, onToggleSound, onExit, onArrive }) {
         </div>
       </div>
 
+      {/* GPS status banner */}
+      <GpsStatus mode={mode} geo={geo} />
+
       {/* controls */}
       <div style={{ padding:'0 18px calc(20px + env(safe-area-inset-bottom))', display:'flex', gap:12 }}>
-        <button onClick={()=>setPaused(p=>!p)} aria-label="일시정지" style={ctrlBtn(false)}>
-          <Icon name={paused?'nav':'clock'} size={24} color="#fff" />
-        </button>
+        {mode === 'sim' && (
+          <button onClick={()=>setPaused(p=>!p)} aria-label="일시정지" style={ctrlBtn(false)}>
+            <Icon name={paused?'nav':'clock'} size={24} color="#fff" />
+          </button>
+        )}
         <button onClick={advance} title="다음 정류장 (데모)" style={ctrlBtn(true)}>
           <Icon name="forward" size={22} color={T.goldText} />
         </button>
@@ -140,9 +160,13 @@ function NavScreen({ route, soundOn, onToggleSound, onExit, onArrive }) {
         </button>
       </div>
 
-      {/* simulated-GPS hint */}
-      <div style={{ textAlign:'center', fontSize:13, fontWeight:600, color:'rgba(255,255,255,0.45)', padding:'2px 0 8px' }}>
-        실시간 위치로 자동 안내 중 · ⏩ 로 빨리 보기
+      {/* mode toggle: 실시간 GPS ↔ 데모 */}
+      <div style={{ textAlign:'center', padding:'2px 0 10px' }}>
+        <button onClick={()=>{ setPaused(false); setMode(m => m === 'gps' ? 'sim' : 'gps'); }}
+          style={{ background:'none', border:'none', cursor:'pointer', fontFamily:'inherit',
+            fontSize:13, fontWeight:700, color:'rgba(255,255,255,0.6)', textDecoration:'underline', padding:6 }}>
+          {mode === 'gps' ? '위치 없이 데모로 보기 ⏩' : '실시간 GPS로 전환'}
+        </button>
       </div>
 
       {phase==='preAlert' && <PreAlert name={alightName} onConfirm={dismissPre} />}
@@ -156,6 +180,36 @@ function ctrlBtn(gold) {
   return { width:64, minHeight:64, borderRadius:18, border:'none', cursor:'pointer', flexShrink:0,
     background: gold?T.gold:'rgba(255,255,255,0.12)',
     display:'flex', alignItems:'center', justifyContent:'center' };
+}
+
+// ── GPS 상태 배너 ───────────────────────────────────────────
+function GpsStatus({ mode, geo }) {
+  let dot = T.muted, text = '', sub = '';
+  if (mode === 'sim') {
+    dot = T.gold; text = '데모 모드'; sub = '⏩ 버튼으로 정류장을 넘겨 흐름을 확인하세요';
+  } else if (geo.status === 'active') {
+    dot = T.green; text = '실시간 위치로 안내 중';
+    sub = geo.accuracy != null ? `GPS 정확도 ±${Math.round(geo.accuracy)}m` : '';
+  } else if (geo.status === 'locating') {
+    dot = T.gold; text = '위치를 찾는 중…'; sub = '잠시만 기다려 주세요';
+  } else if (geo.status === 'denied') {
+    dot = T.red; text = '위치 권한이 꺼져 있어요'; sub = '설정에서 권한을 켜거나 데모로 보세요';
+  } else if (geo.status === 'unsupported') {
+    dot = T.red; text = '이 기기는 위치 기능 미지원'; sub = '데모 모드로 확인하세요';
+  } else {
+    dot = T.red; text = '위치를 가져오지 못했어요'; sub = geo.error || '';
+  }
+  return (
+    <div style={{ margin:'0 18px 10px', display:'flex', alignItems:'center', gap:10,
+      background:'rgba(255,255,255,0.07)', borderRadius:14, padding:'10px 14px' }}>
+      <span style={{ width:11, height:11, borderRadius:'50%', background:dot, flexShrink:0,
+        boxShadow:`0 0 0 4px ${dot}22` }} />
+      <div style={{ minWidth:0 }}>
+        <div style={{ fontSize:15, fontWeight:800, color:'#fff' }}>{text}</div>
+        {sub && <div style={{ fontSize:12.5, fontWeight:600, color:'rgba(255,255,255,0.55)', marginTop:1 }}>{sub}</div>}
+      </div>
+    </div>
+  );
 }
 
 // ── Progress bar ────────────────────────────────────────────

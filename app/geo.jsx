@@ -11,10 +11,14 @@ const AG_FB = { soundOn:true, vibrateOn:true, voiceVol:'normal', voiceRate:'norm
 function setFeedbackSettings(s) { Object.assign(AG_FB, s); }
 
 // 진동: navigator.vibrate — 안드로이드 크롬 지원, iOS 사파리는 미지원이라 안전하게 무시된다.
-// 설정에서 진동을 끄면 발생시키지 않는다.
+// vibrate(): 하차·환승·도착 등 안전 알림용 — 설정과 무관하게 항상 동작한다.
 function vibrate(pattern) {
-  if (!AG_FB.vibrateOn) return;
   try { navigator.vibrate && navigator.vibrate(pattern); } catch(e){}
+}
+// vibrateFeedback(): 역 선택 등 보조 피드백용 — 설정(vibrateOn)이 켜져 있을 때만 동작.
+function vibrateFeedback(pattern) {
+  if (!AG_FB.vibrateOn) return;
+  vibrate(pattern);
 }
 // 음성: Web Speech API. on(보통 soundOn)이 켜져 있을 때만 발화한다.
 // 크기(volume)·속도(rate)는 설정값을 따르며, override로 즉시 미리듣기 값을 넘길 수 있다.
@@ -100,4 +104,4 @@ function geofenceLeg(stops, coords) {
   return { nearestIdx, nearestDist, alightDist: distM(coords, alight) };
 }
 
-Object.assign(window, { distM, GEO, useGeolocation, geofenceLeg, vibrate, speak, setFeedbackSettings });
+Object.assign(window, { distM, GEO, useGeolocation, geofenceLeg, vibrate, vibrateFeedback, speak, setFeedbackSettings });

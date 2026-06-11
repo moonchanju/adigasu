@@ -116,9 +116,9 @@ function SearchPanel({ field, region, recents, soundOn, onPick, onClose, onRemov
   const label = field === 'origin' ? '어디서 타시나요?' : '어디서 내리시나요?';
   const accent = field === 'origin' ? T.green : T.red;
 
-  // 역 선택 시 피드백: 짧은 진동 + (음성 안내 설정 시) 선택 안내 발화
+  // 역 선택 시 피드백: 짧은 진동(설정 시) + (음성 안내 설정 시) 선택 안내 발화
   function handlePick(p) {
-    vibrate(35);
+    vibrateFeedback(35);
     speak(`${p.name}, ${field === 'origin' ? '출발지로' : '도착지로'} 선택했습니다`, soundOn);
     onPick(p);
   }
@@ -418,13 +418,16 @@ function Segmented({ value, options, onPick }) {
   );
 }
 
-function SettingRow({ icon, label, children }) {
+function SettingRow({ icon, label, sub, children }) {
   return (
     <div style={{ display:'flex', alignItems:'center', gap:14, padding:'16px 2px' }}>
       <div style={{ width:46, height:46, borderRadius:23, background:T.paperDeep, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
         <Icon name={icon} size={24} color={T.ink} />
       </div>
-      <span style={{ flex:1, minWidth:0, fontSize:21, fontWeight:800, color:T.ink }}>{label}</span>
+      <div style={{ flex:1, minWidth:0 }}>
+        <div style={{ fontSize:21, fontWeight:800, color:T.ink }}>{label}</div>
+        {sub && <div style={{ fontSize:13.5, fontWeight:600, color:T.muted, marginTop:2 }}>{sub}</div>}
+      </div>
       {children}
     </div>
   );
@@ -448,8 +451,8 @@ function SettingsSheet({ soundOn, vibrateOn, voiceVol, voiceRate, onChange, onCl
           <Toggle on={soundOn} onClick={()=>{ const v=!soundOn; onChange('soundOn', v); if (v) speak('들리세요? 안내 음성입니다', true); }} />
         </SettingRow>
         <div style={{ height:1, background:T.line }} />
-        <SettingRow icon="bell" label="진동">
-          <Toggle on={vibrateOn} onClick={()=>{ const v=!vibrateOn; onChange('vibrateOn', v); if (v) { setFeedbackSettings({ vibrateOn:true }); vibrate(40); } }} />
+        <SettingRow icon="bell" label="선택 시 진동" sub="하차·환승 알림 진동은 항상 켜져요">
+          <Toggle on={vibrateOn} onClick={()=>{ const v=!vibrateOn; onChange('vibrateOn', v); if (v) { setFeedbackSettings({ vibrateOn:true }); vibrateFeedback(40); } }} />
         </SettingRow>
         <div style={{ height:1, background:T.line }} />
         <SettingRow icon="sound" label="음성 크기">

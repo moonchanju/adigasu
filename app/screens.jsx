@@ -323,6 +323,12 @@ function RoutesScreen({ origin, dest, routes, note, onBack, onChoose }) {
             데모 데이터(대구) · ODsay 키 설정 시 실제 경로로 전환됩니다
           </div>
         )}
+        {note === 'shorthop' && (
+          <div style={{ background:T.greenSoft, color:T.green, borderRadius:16, padding:'12px 16px',
+            fontSize:15, fontWeight:700, textAlign:'center' }}>
+            가까운 거리예요 · 한 정거장 직행 버스를 찾았어요
+          </div>
+        )}
         {routes && routes.length
           ? routes.map(rt => <RouteCard key={rt.id} rt={rt} onChoose={()=>onChoose(rt)} />)
           : (

@@ -70,6 +70,22 @@ async function handleApi(req, res, url) {
       });
       return sendJSON(res, 200, result);
     }
+    // 정류장 경유 버스 목록 (근거리 직행버스 탐색용)
+    if (url.pathname === '/api/station-buses') {
+      const result = await odsay('busStationInfo', {
+        stationID: url.searchParams.get('stationID') || '',
+        CID: url.searchParams.get('cid') || '',
+      });
+      return sendJSON(res, 200, result);
+    }
+    // 한 버스 노선의 정차 순서 (출발→도착 방향·중간 정류장 확인용)
+    if (url.pathname === '/api/bus-lane') {
+      const result = await odsay('busLaneDetail', {
+        busID: url.searchParams.get('busID') || '',
+        CID: url.searchParams.get('cid') || '',
+      });
+      return sendJSON(res, 200, result);
+    }
     return sendJSON(res, 404, { error: 'unknown_endpoint' });
   } catch (e) {
     return sendJSON(res, 502, { error: 'upstream', message: String(e.message || e) });

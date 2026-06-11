@@ -113,9 +113,10 @@ function App() {
     const t0 = Date.now();
     let note = null;
     try {
-      const { routes: found, coords } = await searchRoutes(origin, dest);
+      const { routes: found, coords, note: okNote } = await searchRoutes(origin, dest);
       Object.assign(COORDS, coords);   // 정류장 좌표를 지오펜싱용 사전에 병합
       setRoutes(found);
+      note = okNote || null;           // 'shorthop'(근거리 직행버스) 등 성공 안내
     } catch (e) {
       const code = e && e.code;
       if (code === 'no_api') { setRoutes(ROUTES); note = 'demo'; }      // 키 없음 → 데모 경로

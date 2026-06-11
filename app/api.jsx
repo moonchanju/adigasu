@@ -125,6 +125,75 @@ function mapOdsayPaths(result, coordsOut) {
   return paths.slice(0, 4);
 }
 
+// ── 근거리(한 정거장 등) 직행 버스 탐색 ──────────────────────
+// ODsay가 -98(너무 가까움)로 경로를 안 줄 때 사용. 출발·도착 정류장의 경유 노선을
+// 받아 "같은 busID & 출발 정류장 idx < 도착 정류장 idx"(올바른 방향)인 버스를 찾아
+// 노선 상세로 구간 정류장을 잘라 단일 leg 경로를 구성한다. (둘 다 ODsay stationID 필요)
+async function fetchStationBuses(stationID) {
+  try {
+    const r = await fetch(`/api/station-buses?stationID=${encodeURIComponent(stationID)}`);
+    if (!r.ok) return [];
+    const j = await r.json();
+    return j.lane || [];
+  } catch (e) { return []; }
+}
+async function fetchBusLane(busID) {
+  try {
+    const r = await fetch(`/api/bus-lane?busID=${encodeURIComponent(busID)}`);
+    if (!r.ok) return null;
+    return await r.json();
+  } catch (e) { return null; }
+}
+function cleanBusNo(n) { return String(n || '').replace(/\(.*\)/, '').trim() || String(n || ''); }
+
+async function shortBusRoute(origin, dest) {
+  if (!origin || !dest || !origin.id || !dest.id) return null;
+  const [oLanes, dLanes] = await Promise.all([fetchStationBuses(origin.id), fetchStationBuses(dest.id)]);
+  if (!oLanes.length || !dLanes.length) return null;
+
+  const destIdx = {};
+  dLanes.forEach(l => { destIdx[l.busID] = l.busStationIdx; });
+  let best = null;   // 정규 노선(괄호 없음) 우선 → 정거장 수 적은 순
+  oLanes.forEach(l => {
+    const di = destIdx[l.busID];
+    if (di == null || l.busStationIdx >= di) return;         // 같은 방향(출발<도착)만
+    const parens = /\(/.test(l.busNo) ? 1 : 0;               // 맞춤·변형 노선은 후순위
+    const stops = di - l.busStationIdx;
+    const better = !best || parens < best.parens || (parens === best.parens && stops < best.stops);
+    if (better) best = { busID: l.busID, busNo: l.busNo, stops, parens };
+  });
+  if (!best) return null;
+
+  // 노선 상세로 구간 정류장 이름·좌표 확보 (stationID로 직접 위치 탐색)
+  const coords = {};
+  let stops = null;
+  const lane = await fetchBusLane(best.busID);
+  const S = lane && Array.isArray(lane.station) ? lane.station : null;
+  if (S) {
+    const a = S.findIndex(s => String(s.stationID) === String(origin.id));
+    const b = S.findIndex(s => String(s.stationID) === String(dest.id));
+    if (a >= 0 && b > a) {
+      const seg = S.slice(a, b + 1);
+      stops = seg.map(s => s.stationName);
+      seg.forEach(s => { coords[s.stationName] = { lat:+s.y, lng:+s.x }; });
+    }
+  }
+  if (!stops) {   // 상세 실패 시 출발/도착만으로 구성
+    stops = [origin.name, dest.name];
+    coords[origin.name] = { lat:origin.lat, lng:origin.lng };
+    coords[dest.name]   = { lat:dest.lat,   lng:dest.lng };
+  }
+
+  const durationMin = Math.max(1, Math.round((stops.length - 1) * 2));   // 정거장당 ~2분 추정
+  const now = Date.now();
+  const route = {
+    id: 'short', recommended: true, transfers: 0, durationMin, walkMin: 0,
+    departAt: hhmm(now), arriveAt: hhmm(now + durationMin * 60000),
+    legs: [{ mode: 'bus', line: cleanBusNo(best.busNo), color: LEG_PALETTE[0], stops }],
+  };
+  return { routes: [route], coords, note: 'shorthop' };
+}
+
 // origin/dest: {name,lat,lng}. 반환: { routes, coords(이름→{lat,lng}) }
 // 에러 코드: no_api | no_coords | too_close | no_routes | upstream
 async function searchRoutes(origin, dest) {
@@ -135,7 +204,11 @@ async function searchRoutes(origin, dest) {
   if (r.status === 503) throw apiErr('no_api');
   if (!r.ok || data.error) {
     const msg = (data && data.message) || '';
-    if (/-98\b/.test(msg)) throw apiErr('too_close', msg);  // ODsay -98: 출발·도착이 너무 가까움
+    if (/-98\b/.test(msg)) {                                // ODsay -98: 출발·도착이 너무 가까움(<~700m)
+      const short = await shortBusRoute(origin, dest);      // → 한 정거장 직행 버스 직접 탐색
+      if (short) return short;
+      throw apiErr('too_close', msg);                       // 직행 버스도 없으면 안내
+    }
     throw apiErr('upstream', msg);
   }
   const coords = {};

@@ -64,10 +64,24 @@ function App() {
   const [route, setRoute] = useState(null);     // 선택한 경로
   const [recents, setRecents] = useState(initialRecents);
   const [soundOn, setSoundOn] = useState(saved.soundOn ?? true);
+  const [vibrateOn, setVibrateOn] = useState(saved.vibrateOn ?? true);
+  const [voiceVol, setVoiceVol] = useState(saved.voiceVol ?? 'normal');     // 'normal' | 'loud'
+  const [voiceRate, setVoiceRate] = useState(saved.voiceRate ?? 'normal');  // 'normal' | 'slow'
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   useEffect(() => {
-    try { localStorage.setItem(LS, JSON.stringify({ recents, soundOn })); } catch(e){}
-  }, [recents, soundOn]);
+    try { localStorage.setItem(LS, JSON.stringify({ recents, soundOn, vibrateOn, voiceVol, voiceRate })); } catch(e){}
+  }, [recents, soundOn, vibrateOn, voiceVol, voiceRate]);
+
+  // 피드백 엔진(geo.jsx)에 설정 동기화 → vibrate/speak가 설정을 반영
+  useEffect(() => { setFeedbackSettings({ soundOn, vibrateOn, voiceVol, voiceRate }); }, [soundOn, vibrateOn, voiceVol, voiceRate]);
+
+  function changeSetting(key, val) {
+    if (key === 'soundOn') setSoundOn(val);
+    else if (key === 'vibrateOn') setVibrateOn(val);
+    else if (key === 'voiceVol') setVoiceVol(val);
+    else if (key === 'voiceRate') setVoiceRate(val);
+  }
 
   // 현재 지역 버킷에 추가(이름 기준 중복 제거, 최대 6개)
   function addRecent(...items) {
@@ -133,9 +147,10 @@ function App() {
   const regionRecents = (region && recents[region.id]) || [];   // 현재 지역의 최근 검색만
 
   let body;
-  if (screen === 'region') body = <RegionScreen onSelect={selectRegion} />;
+  if (screen === 'region') body = <RegionScreen onSelect={selectRegion} onSettings={()=>setSettingsOpen(true)} />;
   else if (screen === 'input') body = <InputScreen region={region} origin={origin} dest={dest} recents={regionRecents}
-    soundOn={soundOn} onBack={()=>setScreen('region')} onSet={setField} onSearch={doSearch} onRemoveRecent={removeRecent} />;
+    soundOn={soundOn} onBack={()=>setScreen('region')} onSet={setField} onSearch={doSearch} onRemoveRecent={removeRecent}
+    onSettings={()=>setSettingsOpen(true)} />;
   else if (screen === 'searching') body = <Searching origin={origin && origin.name} dest={dest && dest.name} />;
   else if (screen === 'routes') body = <RoutesScreen origin={origin} dest={dest} routes={routes} note={routeNote}
     onBack={()=>setScreen('input')} onChoose={rt=>{ setRoute(rt); setScreen('nav'); }} />;
@@ -151,6 +166,8 @@ function App() {
       <StatusBar bg={st.bg} fg={st.fg} />
       <div style={{ flex:1, overflow:'hidden', position:'relative', display:'flex', flexDirection:'column' }}>
         <div style={{ flex:1, overflowY:'auto', WebkitOverflowScrolling:'touch' }}>{body}</div>
+        {settingsOpen && <SettingsSheet soundOn={soundOn} vibrateOn={vibrateOn} voiceVol={voiceVol} voiceRate={voiceRate}
+          onChange={changeSetting} onClose={()=>setSettingsOpen(false)} />}
       </div>
       {/* home indicator */}
       <div style={{ height:24, background: st.bg==='#1B2A41'||screen==='nav'?T.ink:T.paper,

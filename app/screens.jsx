@@ -30,8 +30,19 @@ function BrandMark({ size = 60 }) {
   );
 }
 
+// 설정 진입 버튼(헤더 우상단) — light=어두운 배경 위(흰 아이콘)
+function GearButton({ onClick, light }) {
+  return (
+    <button onClick={onClick} aria-label="설정" style={{
+      width:46, height:46, borderRadius:23, border:'none', cursor:'pointer', flexShrink:0, fontFamily:'inherit',
+      background: light ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.06)',
+      display:'flex', alignItems:'center', justifyContent:'center',
+    }}><Icon name="gear" size={24} color={light ? '#fff' : T.ink} /></button>
+  );
+}
+
 // ── Screen 1: Region selection ──────────────────────────────
-function RegionScreen({ onSelect }) {
+function RegionScreen({ onSelect, onSettings }) {
   return (
     <div style={{ background:T.paper, minHeight:'100%', display:'flex', flexDirection:'column' }}>
       <div style={{ padding:'28px 22px 14px', display:'flex', alignItems:'center', gap:14 }}>
@@ -42,6 +53,8 @@ function RegionScreen({ onSelect }) {
           <div style={{ fontSize:34, fontWeight:800, color:T.ink, letterSpacing:'-0.03em', lineHeight:1 }}>어디가수?</div>
           <div style={{ fontSize:18, fontWeight:600, color:T.muted, marginTop:6 }}>내릴 곳, 놓치지 마세요</div>
         </div>
+        <div style={{ flex:1 }} />
+        <GearButton onClick={onSettings} />
       </div>
 
       <div style={{ padding:'10px 22px 6px', fontSize:22, fontWeight:800, color:T.inkSoft }}>어디로 가시나요?</div>
@@ -243,7 +256,7 @@ function RouteField({ value, placeholder, dotColor, icon, onClick }) {
 }
 
 // ── Screen 2: Route input ───────────────────────────────────
-function InputScreen({ region, origin, dest, recents, soundOn, onBack, onSet, onSearch, onRemoveRecent }) {
+function InputScreen({ region, origin, dest, recents, soundOn, onBack, onSet, onSearch, onRemoveRecent, onSettings }) {
   const [panel, setPanel] = useState(null); // 'origin' | 'dest' | null
 
   // 출발지·도착지가 같은 곳이면 검색 전에 차단(있으면 id, 없으면 이름으로 비교)
@@ -258,7 +271,7 @@ function InputScreen({ region, origin, dest, recents, soundOn, onBack, onSet, on
           opacity:0.22, color:'#fff', pointerEvents:'none', display:'flex', alignItems:'flex-end' }}>
           <RegionArt id={region.id} color="#fff" style={{ width:'100%', height:'100%' }} />
         </div>
-        <TopBar title={`${region.name} 경로 찾기`} onBack={onBack} bg="transparent" />
+        <TopBar title={`${region.name} 경로 찾기`} onBack={onBack} bg="transparent" right={<GearButton onClick={onSettings} light />} />
       </div>
 
       <div style={{ padding:'20px 18px', display:'flex', flexDirection:'column', gap:14 }}>
@@ -375,4 +388,86 @@ function RouteCard({ rt, onChoose }) {
   );
 }
 
-Object.assign(window, { RegionScreen, InputScreen, RoutesScreen, BrandMark });
+// ── Settings sheet (음성·진동 설정) ─────────────────────────
+// 큰 토글/세그먼트로 노인 사용자가 다루기 쉽게. 값은 App이 보관·저장한다.
+function Toggle({ on, onClick }) {
+  return (
+    <button onClick={onClick} aria-label="켜기/끄기" aria-pressed={on} style={{
+      width:64, height:38, borderRadius:19, border:'none', cursor:'pointer', flexShrink:0, padding:0,
+      background: on ? T.green : '#C9C0AF', position:'relative', transition:'background .2s',
+    }}>
+      <span style={{ position:'absolute', top:3, left: on ? 29 : 3, width:32, height:32, borderRadius:16,
+        background:'#fff', transition:'left .2s', boxShadow:'0 2px 5px rgba(0,0,0,0.25)' }} />
+    </button>
+  );
+}
+
+function Segmented({ value, options, onPick }) {
+  return (
+    <div style={{ display:'flex', gap:8, flexShrink:0 }}>
+      {options.map(o => {
+        const sel = o.val === value;
+        return (
+          <button key={o.val} onClick={()=>onPick(o.val)} style={{
+            padding:'11px 18px', borderRadius:13, cursor:'pointer', fontFamily:'inherit', fontSize:18, fontWeight:800,
+            border:`2px solid ${sel ? T.ink : T.line}`, background: sel ? T.ink : '#fff', color: sel ? '#fff' : T.muted,
+          }}>{o.label}</button>
+        );
+      })}
+    </div>
+  );
+}
+
+function SettingRow({ icon, label, children }) {
+  return (
+    <div style={{ display:'flex', alignItems:'center', gap:14, padding:'16px 2px' }}>
+      <div style={{ width:46, height:46, borderRadius:23, background:T.paperDeep, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+        <Icon name={icon} size={24} color={T.ink} />
+      </div>
+      <span style={{ flex:1, minWidth:0, fontSize:21, fontWeight:800, color:T.ink }}>{label}</span>
+      {children}
+    </div>
+  );
+}
+
+function SettingsSheet({ soundOn, vibrateOn, voiceVol, voiceRate, onChange, onClose }) {
+  return (
+    <div style={{ position:'absolute', inset:0, zIndex:45, display:'flex', flexDirection:'column', justifyContent:'flex-end' }}>
+      <div onClick={onClose} style={{ position:'absolute', inset:0, background:'rgba(15,23,38,0.45)' }} />
+      <div className="ag-sheet" style={{ position:'relative', background:'#fff', borderRadius:'32px 32px 0 0',
+        padding:'24px 24px calc(22px + env(safe-area-inset-bottom))', boxShadow:T.shadowLg }}>
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:6 }}>
+          <span style={{ fontSize:28, fontWeight:800, color:T.ink }}>설정</span>
+          <button onClick={onClose} aria-label="닫기" style={{ width:44, height:44, borderRadius:22, border:'none',
+            background:T.paperDeep, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>
+            <Icon name="x" size={24} color={T.ink} />
+          </button>
+        </div>
+
+        <SettingRow icon="sound" label="음성 안내">
+          <Toggle on={soundOn} onClick={()=>{ const v=!soundOn; onChange('soundOn', v); if (v) speak('들리세요? 안내 음성입니다', true); }} />
+        </SettingRow>
+        <div style={{ height:1, background:T.line }} />
+        <SettingRow icon="bell" label="진동">
+          <Toggle on={vibrateOn} onClick={()=>{ const v=!vibrateOn; onChange('vibrateOn', v); if (v) { setFeedbackSettings({ vibrateOn:true }); vibrate(40); } }} />
+        </SettingRow>
+        <div style={{ height:1, background:T.line }} />
+        <SettingRow icon="sound" label="음성 크기">
+          <Segmented value={voiceVol} options={[{val:'normal',label:'보통'},{val:'loud',label:'크게'}]}
+            onPick={v=>{ onChange('voiceVol', v); speak('안내 음성입니다', soundOn, { vol:v }); }} />
+        </SettingRow>
+        <div style={{ height:1, background:T.line }} />
+        <SettingRow icon="clock" label="음성 속도">
+          <Segmented value={voiceRate} options={[{val:'normal',label:'보통'},{val:'slow',label:'천천히'}]}
+            onPick={v=>{ onChange('voiceRate', v); speak('안내 음성입니다', soundOn, { rate:v }); }} />
+        </SettingRow>
+
+        <div style={{ marginTop:18 }}>
+          <PrimaryButton tone="ink" onClick={onClose}>완료</PrimaryButton>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+Object.assign(window, { RegionScreen, InputScreen, RoutesScreen, BrandMark, SettingsSheet });

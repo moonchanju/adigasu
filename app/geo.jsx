@@ -6,16 +6,30 @@
 
 // ── 피드백 헬퍼 (촉각·음성) ─────────────────────────────────
 // 안내 화면과 역 선택 등 여러 화면이 공유한다(geo.jsx가 먼저 로드되므로 전역 제공).
+// 설정값은 App이 setFeedbackSettings로 동기화한다(localStorage 저장값을 반영).
+const AG_FB = { soundOn:true, vibrateOn:true, voiceVol:'normal', voiceRate:'normal' };
+function setFeedbackSettings(s) { Object.assign(AG_FB, s); }
+
 // 진동: navigator.vibrate — 안드로이드 크롬 지원, iOS 사파리는 미지원이라 안전하게 무시된다.
-function vibrate(pattern) { try { navigator.vibrate && navigator.vibrate(pattern); } catch(e){} }
-// 음성: Web Speech API. soundOn(음성 안내 설정)이 켜져 있을 때만 발화한다.
-function speak(text, on) {
-  if (!on) return;
+// 설정에서 진동을 끄면 발생시키지 않는다.
+function vibrate(pattern) {
+  if (!AG_FB.vibrateOn) return;
+  try { navigator.vibrate && navigator.vibrate(pattern); } catch(e){}
+}
+// 음성: Web Speech API. on(보통 soundOn)이 켜져 있을 때만 발화한다.
+// 크기(volume)·속도(rate)는 설정값을 따르며, override로 즉시 미리듣기 값을 넘길 수 있다.
+function speak(text, on, override) {
+  const enabled = on !== undefined ? on : AG_FB.soundOn;
+  if (!enabled) return;
   try {
     const s = window.speechSynthesis; if (!s) return;
     s.cancel();
     const u = new SpeechSynthesisUtterance(text);
-    u.lang = 'ko-KR'; u.rate = 0.92; u.pitch = 1;
+    u.lang = 'ko-KR'; u.pitch = 1;
+    const vol  = (override && override.vol)  || AG_FB.voiceVol;
+    const rate = (override && override.rate) || AG_FB.voiceRate;
+    u.volume = vol === 'loud' ? 1 : 0.85;
+    u.rate   = rate === 'slow' ? 0.72 : 0.92;
     s.speak(u);
   } catch(e){}
 }
@@ -86,4 +100,4 @@ function geofenceLeg(stops, coords) {
   return { nearestIdx, nearestDist, alightDist: distM(coords, alight) };
 }
 
-Object.assign(window, { distM, GEO, useGeolocation, geofenceLeg, vibrate, speak });
+Object.assign(window, { distM, GEO, useGeolocation, geofenceLeg, vibrate, speak, setFeedbackSettings });

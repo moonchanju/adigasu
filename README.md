@@ -6,7 +6,7 @@
   <br/>
 
   <a href="https://adigasu.onrender.com"><img src="https://img.shields.io/badge/웹으로_바로_열기-F4B23E?style=for-the-badge&logo=googlechrome&logoColor=white" alt="웹 앱 열기"/></a>
-  <a href="https://github.com/moonchanju/adigasu/releases"><img src="https://img.shields.io/badge/APK_다운로드-Android-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="APK 다운로드"/></a>
+  <a href="https://github.com/moonchanju/adigasu/releases/download/v1.0.0/adigasu.apk"><img src="https://img.shields.io/badge/APK_다운로드-Android-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="APK 다운로드"/></a>
 
   <br/><br/>
 
@@ -41,7 +41,7 @@
 
 **👉 [https://adigasu.onrender.com](https://adigasu.onrender.com) 에서 바로 이용할 수 있습니다.**
 
-Android는 위 링크 또는 [APK 다운로드](https://github.com/moonchanju/adigasu/releases)로 설치하세요.
+Android는 위 링크 또는 [APK 다운로드](https://github.com/moonchanju/adigasu/releases/download/v1.0.0/adigasu.apk)로 설치하세요.
 
 ---
 

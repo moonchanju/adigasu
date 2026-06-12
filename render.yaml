@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: adigasu
+    runtime: node
+    startCommand: node server.js
+    envVars:
+      - key: ODSAY_API_KEY
+        sync: false
+      - key: ODSAY_REFERER
+        sync: false

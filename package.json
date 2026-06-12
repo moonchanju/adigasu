@@ -1,0 +1,9 @@
+{
+  "name": "adigasu",
+  "version": "1.0.0",
+  "description": "어디가수? — 대중교통 하차 알림 웹앱",
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "start": "node server.js"
+  }
+}

@@ -1,56 +1,97 @@
-# 어디가수? — 어르신 지상 대중교통 하차 알림
+<div align="center">
+  <img src="images/logo.svg" width="96" height="96" alt="어디가수 로고" />
+  <h1>어디가수?</h1>
+  <p><b>어르신을 위한 지상 대중교통 하차 알림 앱</b></p>
+  <p>GPS 지오펜싱으로 내릴 정류장이 가까워지면 자동으로 알려줍니다</p>
+  <br/>
 
-서울·부산·대구 등 전국 광역시의 **지상 버스** 중심으로, 실시간 GPS 지오펜싱으로 하차 시점을
-"곧 내리세요 / 지금 내리세요"로 안내하는 앱(React, 빌드 없는 단일 페이지).
+  <a href="https://adigasu.onrender.com"><img src="https://img.shields.io/badge/웹으로_바로_열기-F4B23E?style=for-the-badge&logo=googlechrome&logoColor=white" alt="웹 앱 열기"/></a>
+  <a href="https://github.com/moonchanju/adigasu/releases"><img src="https://img.shields.io/badge/APK_다운로드-Android-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="APK 다운로드"/></a>
 
-## 실행
+  <br/><br/>
 
-```bash
-cd adigasu
-# 1) 실데이터(ODsay 연동) — 키를 .odsay_key 에 넣고:
-echo '발급받은_원본_API키' > .odsay_key
-node server.js
-# 2) 키 없이 데모(대구 고정 데이터)로만 보기:
-node server.js
-```
+  ![PWA](https://img.shields.io/badge/PWA-설치_가능-5A0FC8?style=flat-square&logo=pwa&logoColor=white)
+  ![Node](https://img.shields.io/badge/Node-내장_모듈만-339933?style=flat-square&logo=node.js&logoColor=white)
+  ![React](https://img.shields.io/badge/React_18-빌드_없음-61DAFB?style=flat-square&logo=react&logoColor=black)
+  ![ODsay](https://img.shields.io/badge/ODsay-대중교통_API-0066CC?style=flat-square)
+</div>
 
-접속: <http://localhost:8000/어디가수.html>
+---
 
-> 실폰에서 GPS를 쓰려면 **HTTPS 또는 localhost**(보안 컨텍스트)여야 합니다. `file://` 직접 열기는 위치 권한이 막힙니다.
+## 화면
+
+| 지역 선택 | 출발·도착 입력 | 경로 추천 | 하차 안내 |
+|:---------:|:--------------:|:---------:|:---------:|
+| ![지역 선택](images/regionSelect.png) | ![경로 입력](images/routeInput.png) | ![경로 추천](images/routeRecommendation.png) | ![하차 알림](images/routeAlarm.png) |
+
+---
+
+## 주요 기능
+
+- **GPS 지오펜싱 하차 알림** — 정류장 450m 앞부터 예고, 70m 진입 시 "지금 내리세요" 알림
+- **TTS + 진동 + 화면 강조** — 소리(Web Speech API), 진동, 전체화면 점멸로 세 가지 동시 안내
+- **iOS 대응** — iPhone Safari는 Vibration API 미지원 → TTS + 화면 색반전 + `aria-live` 스크린리더로 보완
+- **지역별 일러스트** — 서울·부산·대구 등 8개 광역시 대표 SVG 삽화 내장
+- **최근 정류장 기억** — 지역별 최대 6개 자동 저장 (localStorage)
+- **PWA 설치** — 홈 화면에 추가하면 전체화면 앱처럼 동작, 오프라인 캐시 지원
+
+---
+
+## 사용하기
+
+**👉 [https://adigasu.onrender.com](https://adigasu.onrender.com) 에서 바로 이용할 수 있습니다.**
+
+Android는 위 링크 또는 [APK 다운로드](https://github.com/moonchanju/adigasu/releases)로 설치하세요.
+
+---
+
+## 모바일에 앱으로 설치하기
+
+| Android (Chrome) | iOS (Safari) |
+|:---:|:---:|
+| 주소창 오른쪽 **설치** 버튼 탭 | 공유 버튼 → **홈 화면에 추가** |
+
+---
 
 ## 구조
 
-| 파일 | 역할 |
-| --- | --- |
-| `server.js` | 정적 서빙 + ODsay 프록시(키 보호·CORS 우회). 의존성 0, Node 내장 모듈만 |
-| `app/data.jsx` | 디자인 토큰, 데모 데이터, 아이콘 |
-| `app/regionart.jsx` | 8개 광역시 대표 일러스트 SVG (`RegionArt` 컴포넌트) |
-| `app/geo.jsx` | Geolocation(`watchPosition`) + Haversine 거리 + 지오펜싱 + 화면 유지(`useWakeLock`) |
-| `app/api.jsx` | 프록시 호출 + ODsay 응답 → 내부 경로 데이터 매핑 |
-| `app/ui.jsx` / `screens.jsx` / `navigation.jsx` / `main.jsx` | UI · 화면 · 안내 엔진 · 앱 셸 |
+```
+adigasu/
+├── 어디가수.html       # 앱 진입점 (PWA 메타, CDN React 로드)
+├── server.js           # 정적 서빙 + ODsay 프록시 (Node 내장 모듈만, 의존성 0)
+├── sw.js               # 서비스 워커 (오프라인 캐시)
+├── manifest.json       # PWA 매니페스트
+└── app/
+    ├── data.jsx        # 디자인 토큰, 지역 목록, 데모 데이터
+    ├── regionart.jsx   # 광역시별 SVG 일러스트
+    ├── geo.jsx         # GPS watchPosition + Haversine + 지오펜싱 + WakeLock
+    ├── api.jsx         # ODsay 프록시 호출 → 내부 경로 포맷 변환
+    ├── ui.jsx          # 공용 UI 컴포넌트
+    ├── screens.jsx     # 화면별 컴포넌트 (지역·입력·경로·안내·완료)
+    ├── navigation.jsx  # 하차 안내 엔진 (TTS·진동·지오펜싱 조율)
+    └── main.jsx        # 앱 루트, 화면 전환 상태 관리
+```
 
-데이터 흐름: 역 검색(`/api/stations`) → 좌표 확보 → 경로 탐색(`/api/routes`) →
-경로의 정류장 좌표가 그대로 GPS 지오펜싱으로 연결되어 하차 알림.
+---
 
-## 환경 변수
+## 배포 (Render)
 
-| 변수 | 기본값 | 설명 |
-| --- | --- | --- |
-| `ODSAY_API_KEY` | (없음) | ODsay 원본 인증키. 없으면 `.odsay_key` 파일을 읽고, 그것도 없으면 데모 모드 |
-| `ODSAY_REFERER` | `http://localhost:8000` | ODsay에 등록한 URI. 서버 호출 Referer를 등록 URI와 맞춤 |
-| `PORT` | `8000` | 서버 포트 |
+`render.yaml`이 포함되어 있어 Render에서 바로 배포할 수 있습니다.
 
-## 배포(실사용 전환 시)
+1. 이 레포를 Render에 연결하고 시작 명령 `node server.js` 확인
+2. 환경변수 설정:
 
-GPS는 HTTPS가 필수이므로 정적 호스팅(file://)만으론 안 되고, **Node 서버를 올릴 수 있는 호스트**가 필요합니다.
+   | 키 | 설명 |
+   |---|---|
+   | `ODSAY_API_KEY` | ODsay 원본 인증키 |
+   | `ODSAY_REFERER` | `https://배포도메인` (ODsay에 URI 등록 필요) |
 
-1. Render / Railway / Fly.io 등에 이 폴더를 올리고 시작 명령을 `node server.js` 로 지정
-2. 환경변수에 `ODSAY_API_KEY`, `ODSAY_REFERER=https://배포도메인` 설정
-3. ODsay LAB에서 **배포 도메인을 URI로 추가 등록**(프로토콜 제외, 예: `myapp.onrender.com`)
+3. ODsay LAB에서 배포 도메인을 허용 URI로 추가
 
-## 알려진 제약 및 선택 개선 사항
+---
 
-- **주소 검색**: 현재는 역/정류장 이름 검색만(ODsay). "○○동 △△아파트" 같은 주소→좌표는
-  카카오 등 별도 지오코더 키가 추가로 필요.
-- **iOS 진동**: iPhone Safari는 Vibration API 미지원 → 소리(TTS)+화면 색상반전+스크린리더(`aria-live`)로 보완됨.
-- **지오펜싱 임계값 튜닝**: 도착 70m / 예고 450m / 지나침 판정 130m·여유 50m(`app/geo.jsx`의 `GEO`)는 실제 탑승 테스트로 보정 권장.
+## 알려진 제약
+
+- 역/정류장 **이름 검색만** 지원 (주소 검색은 별도 지오코더 키 필요)
+- 지오펜싱 임계값(도착 70m / 예고 450m)은 실제 탑승 테스트로 보정 권장
+- **지하철·지하 노선 미지원** — 지상 버스 전용

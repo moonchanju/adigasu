@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "com.onrender.adigasu.twa",
+        "sha256_cert_fingerprints": ["B5:D7:0E:3F:A9:41:B6:27:7E:E9:43:21:B9:47:4C:11:BB:F0:C0:26:D2:0B:31:DF:53:AC:9C:66:E5:FC:4B:A8"]
+      }
+    }]

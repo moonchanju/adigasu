@@ -1,27 +1,14 @@
-// ─────────────────────────────────────────────────────────────
-// 어디가수? — real geolocation + geofencing engine
-// W3C Geolocation API (navigator.geolocation) 기반. 키 불필요·무료.
-// HTTPS 또는 localhost 에서만 동작한다.
-// ─────────────────────────────────────────────────────────────
 
-// ── 피드백 헬퍼 (촉각·음성) ─────────────────────────────────
-// 안내 화면과 역 선택 등 여러 화면이 공유한다(geo.jsx가 먼저 로드되므로 전역 제공).
-// 설정값은 App이 setFeedbackSettings로 동기화한다(localStorage 저장값을 반영).
 const AG_FB = { soundOn:true, vibrateOn:true, voiceVol:'normal', voiceRate:'normal' };
 function setFeedbackSettings(s) { Object.assign(AG_FB, s); }
 
-// 진동: navigator.vibrate — 안드로이드 크롬 지원, iOS 사파리는 미지원이라 안전하게 무시된다.
-// vibrate(): 하차·환승·도착 등 안전 알림용 — 설정과 무관하게 항상 동작한다.
 function vibrate(pattern) {
   try { navigator.vibrate && navigator.vibrate(pattern); } catch(e){}
 }
-// vibrateFeedback(): 역 선택 등 보조 피드백용 — 설정(vibrateOn)이 켜져 있을 때만 동작.
 function vibrateFeedback(pattern) {
   if (!AG_FB.vibrateOn) return;
   vibrate(pattern);
 }
-// 음성: Web Speech API. on(보통 soundOn)이 켜져 있을 때만 발화한다.
-// 크기(volume)·속도(rate)는 설정값을 따르며, override로 즉시 미리듣기 값을 넘길 수 있다.
 function speak(text, on, override) {
   const enabled = on !== undefined ? on : AG_FB.soundOn;
   if (!enabled) return;
@@ -38,7 +25,6 @@ function speak(text, on, override) {
   } catch(e){}
 }
 
-// Haversine 거리(미터). 두 {lat,lng} 사이의 지표면 거리.
 function distM(a, b) {
   if (!a || !b) return Infinity;
   const R = 6371000, toRad = d => d * Math.PI / 180;
@@ -48,17 +34,13 @@ function distM(a, b) {
   return 2 * R * Math.asin(Math.min(1, Math.sqrt(s)));
 }
 
-// 지오펜싱 임계값(미터)
 const GEO = {
-  ARRIVE_R:  70,  // 정류장 "도착/통과" 판정 반경
-  PRE_R:     450, // 하차역 예고("곧 내리세요") 진입 반경
-  PASS_R:    130, // 하차역 최근접이 이 안(70~130m)까지 들어왔다가 다시 멀어지면 "지나침"으로 판정
-  PASS_HYST: 50,  // 최근접 대비 이만큼(m) 다시 멀어져야 지나침 확정(GPS 흔들림으로 인한 오탐 방지)
+  ARRIVE_R:  70,
+  PRE_R:     450,
+  PASS_R:    130,
+  PASS_HYST: 50,
 };
 
-// 화면 꺼짐 방지(Screen Wake Lock API). 안내 중 화면이 자동으로 꺼지면 진동·음성 알림도
-// 함께 멈추므로, active일 때 화면 잠금을 잡고, 탭이 가려졌다 돌아오면 다시 잡는다.
-// 미지원 기기(예: 일부 iOS 버전)는 조용히 무시된다(안전 폴백: 화면 점유형 알림).
 function useWakeLock(active) {
   React.useEffect(() => {
     if (!active || typeof navigator === 'undefined' || !navigator.wakeLock) return;
@@ -77,10 +59,6 @@ function useWakeLock(active) {
   }, [active]);
 }
 
-// 실시간 위치 추적 훅.
-// enabled=true 일 때 watchPosition 으로 구독, 언마운트/비활성 시 해제.
-// 반환: { status, coords, accuracy, error }
-//   status: 'idle' | 'unsupported' | 'locating' | 'active' | 'denied' | 'error'
 function useGeolocation(enabled) {
   const [state, setState] = React.useState({ status:'idle', coords:null, accuracy:null, error:null });
 
@@ -111,9 +89,6 @@ function useGeolocation(enabled) {
   return state;
 }
 
-// 한 leg(노선 구간) 안에서 현재 위치가 도달한 정류장 인덱스와 하차역까지 거리를 계산.
-// stops: 정류장 이름 배열, coords: 현재 위치 {lat,lng}
-// 반환: { nearestIdx, nearestDist, alightDist } (좌표 없으면 null)
 function geofenceLeg(stops, coords) {
   if (!coords) return null;
   let nearestIdx = 0, nearestDist = Infinity;

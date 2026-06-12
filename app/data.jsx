@@ -1,9 +1,4 @@
-// ─────────────────────────────────────────────────────────────
-// 어디가수? — design tokens, domain data, icons
-// ─────────────────────────────────────────────────────────────
 
-// Design tokens — "Calm Clarity": warm paper, ink navy, one gold accent,
-// semantic green (go) / red (stop). Elderly-first: large type, high contrast.
 const T = {
   paper:    '#F4EEE3',
   paperDeep:'#EBE3D4',
@@ -23,7 +18,6 @@ const T = {
   shadowLg: '0 16px 40px rgba(27,42,65,0.18)',
 };
 
-// ── Regions (ground transit service areas) ──────────────────
 const REGIONS = [
   { id:'seoul',   name:'서울', glyph:'서', tone:'#1B2A41', live:true },
   { id:'incheon', name:'인천', glyph:'인', tone:'#2E6CB5', live:true },
@@ -35,16 +29,12 @@ const REGIONS = [
   { id:'sejong',  name:'세종', glyph:'세', tone:'#2E7D6B', live:true },
 ];
 
-// ── Place dictionary for autocomplete (대구) ────────────────
 const PLACES = [
   '수성못', '동대구역', '대구역', '반월당', '중앙로', '두류공원', '서문시장',
   '동성로', '수성구청', '들안길', '황금네거리', '범어네거리', '만촌역',
   '경대병원', '칠성시장', '대구시청', '봉덕시장', '수성시장', '어린이회관',
 ];
 
-// ── Routes: 수성못 → 동대구역 ───────────────────────────────
-// A journey is a list of legs; each leg is a bus ride with ordered stops.
-// stops[0] = board, stops[last] = alight. Between legs = transfer (auto-transition).
 const ROUTES = [
   {
     id: 'r1', recommended: true, transfers: 0, durationMin: 35,
@@ -78,9 +68,6 @@ const ROUTES = [
   },
 ];
 
-// ── Station coordinates (대구) ──────────────────────────────
-// NOTE: 데모용 근사 좌표. 실서비스에서는 ODsay 정류장 API의 위경도로 교체한다.
-// 지오펜싱(거리 계산)·실시간 GPS 자동 진행의 기준 데이터.
 const COORDS = {
   '수성못':        { lat:35.8240, lng:128.6190 },
   '들안길':        { lat:35.8330, lng:128.6210 },
@@ -98,14 +85,10 @@ const COORDS = {
   '동대구역':      { lat:35.8794, lng:128.6286 },
 };
 
-// Flatten a route into a single ordered stop sequence with metadata.
-// Each entry: { name, legIndex, line, color, isTransfer (alight of a non-last leg),
-//               isFinal (last stop), isBoard }
 function flattenJourney(route) {
   const seq = [];
   route.legs.forEach((leg, li) => {
     leg.stops.forEach((name, si) => {
-      // skip duplicate transfer node (alight of leg N == board of leg N+1)
       if (li > 0 && si === 0) return;
       const isAlight = si === leg.stops.length - 1;
       const isLastLeg = li === route.legs.length - 1;
@@ -123,7 +106,6 @@ function flattenJourney(route) {
   return seq;
 }
 
-// ── Icons (simple line glyphs) ──────────────────────────────
 function Icon({ name, size = 24, color = 'currentColor', stroke = 2.4 }) {
   const p = { fill:'none', stroke:color, strokeWidth:stroke, strokeLinecap:'round', strokeLinejoin:'round' };
   const paths = {

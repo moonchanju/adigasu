@@ -1,8 +1,4 @@
-// ─────────────────────────────────────────────────────────────
-// 어디가수? — shared UI building blocks
-// ─────────────────────────────────────────────────────────────
 
-// Navy top bar with optional back button + title/subtitle.
 function TopBar({ title, subtitle, onBack, right, bg = T.ink }) {
   return (
     <div style={{ background:bg, padding:'14px 16px 18px', color:'#fff', flexShrink:0 }}>
@@ -26,7 +22,6 @@ function TopBar({ title, subtitle, onBack, right, bg = T.ink }) {
   );
 }
 
-// Full-width primary action button (gold). Large hit target.
 function PrimaryButton({ children, onClick, disabled, tone = 'gold', icon }) {
   const tones = {
     gold:  { bg:T.gold, color:T.goldText, sh:'0 8px 20px rgba(217,150,28,0.35)' },
@@ -53,7 +48,6 @@ function PrimaryButton({ children, onClick, disabled, tone = 'gold', icon }) {
   );
 }
 
-// Small rounded chip (e.g. bus line, transfer count).
 function Pill({ children, bg = T.green, color = '#fff', size = 18 }) {
   return (
     <span style={{

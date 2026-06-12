@@ -1,13 +1,8 @@
-// ─────────────────────────────────────────────────────────────
-// 어디가수? — Navigation engine + live guide + alerts + done
-// ─────────────────────────────────────────────────────────────
 const { useEffect, useRef } = React;
 
-// feedback helpers(vibrate, speak)는 geo.jsx에서 전역으로 제공된다.
 
-const TICK_MS = 3000; // simulated time between stops
+const TICK_MS = 3000;
 
-// ── Build a flat bar of the whole journey + position map ────
 function buildBar(route) {
   const barStops = [];
   const posMap = {};
@@ -24,21 +19,20 @@ function buildBar(route) {
   return { barStops, posMap };
 }
 
-// ── Live guide screen ───────────────────────────────────────
 function NavScreen({ route, soundOn, onToggleSound, onExit, onArrive }) {
   const { barStops, posMap } = useMemo(() => buildBar(route), [route]);
   const [legIdx, setLegIdx] = useState(0);
-  const [stopIdx, setStopIdx] = useState(0);   // index within current leg
-  const [phase, setPhase] = useState('riding'); // riding | preAlert | transfer | finalAlert | done
+  const [stopIdx, setStopIdx] = useState(0);
+  const [phase, setPhase] = useState('riding');
   const [paused, setPaused] = useState(false);
-  const [mode, setMode] = useState('gps');     // 'gps' (실시간 위치) | 'sim' (데모)
-  const [passed, setPassed] = useState(false); // 하차역을 지나쳤는지(지나침 알림 표시용)
-  const [live, setLive] = useState('');        // 스크린리더 전용 라이브 영역 메시지(aria-live)
+  const [mode, setMode] = useState('gps');
+  const [passed, setPassed] = useState(false);
+  const [live, setLive] = useState('');
   const preFired = useRef(-1);
-  const minAlight = useRef(Infinity);          // 현재 leg에서 하차역까지의 최근접 거리(지나침 판정용)
-  const overFired = useRef(-1);                // 지나침 알림을 이미 띄운 leg 인덱스
-  const geo = useGeolocation(mode === 'gps');  // 실시간 GPS 구독 (gps 모드일 때만)
-  useWakeLock(true);                           // 안내 중에는 화면이 꺼지지 않도록 유지(알림 멈춤 방지)
+  const minAlight = useRef(Infinity);
+  const overFired = useRef(-1);
+  const geo = useGeolocation(mode === 'gps');
+  useWakeLock(true);
 
   const leg = route.legs[legIdx];
   const alightIdx = leg.stops.length - 1;
@@ -48,15 +42,12 @@ function NavScreen({ route, soundOn, onToggleSound, onExit, onArrive }) {
   const nextName = remaining > 0 ? leg.stops[stopIdx + 1] : alightName;
   const barPos = posMap[`${legIdx}-${stopIdx}`] ?? 0;
 
-  // total stops remaining across whole journey (for ETA)
   const totalRemain = (barStops.length - 1) - barPos;
   const minsLeft = Math.max(1, Math.round(totalRemain * (route.durationMin / (barStops.length - 1))));
 
-  // 현재 leg 안에서 target 정류장 인덱스까지 진행시키고, 임계 도달 시 알림 발생.
-  // GPS(거리 기반)와 데모(타이머·버튼) 양쪽이 공유하는 단일 진행 함수.
   function arriveAt(target) {
     setStopIdx(prev => {
-      if (target <= prev) return prev;          // 뒤로/제자리 이동 무시
+      if (target <= prev) return prev;
       const idx = Math.min(target, alightIdx);
       const rem = alightIdx - idx;
       if (rem <= 0) {
@@ -71,14 +62,12 @@ function NavScreen({ route, soundOn, onToggleSound, onExit, onArrive }) {
       return idx;
     });
   }
-  function advance() { arriveAt(stopIdx + 1); }  // 데모: 한 정류장 전진
+  function advance() { arriveAt(stopIdx + 1); }
 
-  // 음성 발화(Web Speech) + 스크린리더(aria-live) 동시 안내 — 저시력 사용자가 OS 보이스오버로도 알림을 받게 한다.
   function announce(msg) { speak(msg, soundOn); setLive(msg); }
   function firePre()   { vibrate([200,100,200]); announce(`곧 내리세요. 다음 정류장은 ${alightName} 입니다.`); }
   function fireTransfer(){ const nl = route.legs[legIdx+1]; vibrate([300,120,300]); announce(`환승입니다. ${nl.line}번 버스로 갈아타세요.`); }
   function fireFinal()  { vibrate([400,150,400,150,500]); announce(`지금 내리세요! ${alightName} 입니다.`); }
-  // 지나침: 70m 도착 반경을 건너뛰고 하차역을 지난 경우. 마지막 구간이면 "다음에 내리세요", 환승 구간이면 환승 재안내.
   function firePassed() {
     setPassed(true);
     vibrate([400,150,400,150,500]);
@@ -86,14 +75,12 @@ function NavScreen({ route, soundOn, onToggleSound, onExit, onArrive }) {
     else { const nl = route.legs[legIdx+1]; announce(`갈아탈 곳을 지나쳤어요. ${alightName}을 지났습니다. ${nl.line}번 버스로 갈아타세요.`); }
   }
 
-  // ── GPS 엔진: 실시간 위치 → 지오펜싱 → 진행/알림 ──────────────
   useEffect(() => {
     if (mode !== 'gps' || phase !== 'riding' || !geo.coords) return;
     const g = geofenceLeg(leg.stops, geo.coords);
     if (!g) return;
-    if (g.alightDist < minAlight.current) minAlight.current = g.alightDist;     // 하차역 최근접 거리 추적
-    if (g.alightDist < GEO.ARRIVE_R) { arriveAt(alightIdx); return; }           // 하차역 도착
-    // 지나침: 한 번 근접(<PASS_R)했다가 도착 판정 없이 다시 멀어지면(>최근접+HYST) 지나친 것으로 본다.
+    if (g.alightDist < minAlight.current) minAlight.current = g.alightDist;
+    if (g.alightDist < GEO.ARRIVE_R) { arriveAt(alightIdx); return; }
     if (overFired.current !== legIdx &&
         minAlight.current < GEO.PASS_R && g.alightDist > minAlight.current + GEO.PASS_HYST) {
       overFired.current = legIdx;
@@ -102,11 +89,10 @@ function NavScreen({ route, soundOn, onToggleSound, onExit, onArrive }) {
       firePassed();
       return;
     }
-    if (g.alightDist < GEO.PRE_R)    { arriveAt(Math.max(stopIdx, alightIdx - 1)); return; } // 곧 내리세요
-    if (g.nearestDist < GEO.ARRIVE_R && g.nearestIdx > stopIdx) arriveAt(g.nearestIdx); // 중간 정류장 통과
+    if (g.alightDist < GEO.PRE_R)    { arriveAt(Math.max(stopIdx, alightIdx - 1)); return; }
+    if (g.nearestDist < GEO.ARRIVE_R && g.nearestIdx > stopIdx) arriveAt(g.nearestIdx);
   }, [geo.coords, mode, phase, stopIdx, legIdx]);
 
-  // ── 데모 모드 타이머 (이동 없이 흐름 확인용) ─────────────────
   useEffect(() => {
     if (mode !== 'sim' || phase !== 'riding' || paused) return;
     const id = setTimeout(advance, TICK_MS);
@@ -115,14 +101,13 @@ function NavScreen({ route, soundOn, onToggleSound, onExit, onArrive }) {
 
   function dismissPre() { setPhase('riding'); }
   function doTransfer() {
-    minAlight.current = Infinity; setPassed(false);   // 새 구간: 최근접·지나침 상태 초기화
+    minAlight.current = Infinity; setPassed(false);
     setLegIdx(l => l + 1); setStopIdx(0); setPhase('riding');
     announce(`${route.legs[legIdx+1].line}번 버스 탑승. 안내를 이어갑니다.`);
   }
 
   return (
     <div style={{ background:T.ink, minHeight:'100%', display:'flex', flexDirection:'column', position:'relative', color:'#fff' }}>
-      {/* 스크린리더 전용 라이브 영역 — 알림 문구를 OS 보이스오버/톡백이 즉시 읽어준다(시각적으론 숨김) */}
       <div className="ag-sr-only" role="status" aria-live="assertive">{live}</div>
       <TopBar title="안내 중" subtitle={`${leg.line}번 버스 탑승 중`} onBack={onExit} bg={T.ink}
         right={
@@ -133,10 +118,8 @@ function NavScreen({ route, soundOn, onToggleSound, onExit, onArrive }) {
           }}><Icon name={soundOn?'sound':'mute'} size={24} /></button>
         } />
 
-      {/* progress bar */}
       <ProgressBar barStops={barStops} pos={barPos} />
 
-      {/* main info card */}
       <div style={{ flex:1, display:'flex', flexDirection:'column', justifyContent:'center', padding:'8px 20px 16px' }}>
         <div style={{ background:'#fff', borderRadius:28, padding:'30px 26px 32px', color:T.ink, boxShadow:T.shadowLg, textAlign:'center' }}>
           <div style={{ fontSize:20, fontWeight:800, color:T.muted }}>다음 정류장</div>
@@ -156,10 +139,8 @@ function NavScreen({ route, soundOn, onToggleSound, onExit, onArrive }) {
         </div>
       </div>
 
-      {/* GPS status banner */}
       <GpsStatus mode={mode} geo={geo} />
 
-      {/* controls */}
       <div style={{ padding:'0 18px calc(20px + env(safe-area-inset-bottom))', display:'flex', gap:12 }}>
         {mode === 'sim' && (
           <button onClick={()=>setPaused(p=>!p)} aria-label="일시정지" style={ctrlBtn(false)}>
@@ -176,7 +157,6 @@ function NavScreen({ route, soundOn, onToggleSound, onExit, onArrive }) {
         </button>
       </div>
 
-      {/* mode toggle: 실시간 GPS ↔ 데모 */}
       <div style={{ textAlign:'center', padding:'2px 0 10px' }}>
         <button onClick={()=>{ setPaused(false); setMode(m => m === 'gps' ? 'sim' : 'gps'); }}
           style={{ background:'none', border:'none', cursor:'pointer', fontFamily:'inherit',
@@ -198,7 +178,6 @@ function ctrlBtn(gold) {
     display:'flex', alignItems:'center', justifyContent:'center' };
 }
 
-// ── GPS 상태 배너 ───────────────────────────────────────────
 function GpsStatus({ mode, geo }) {
   let dot = T.muted, text = '', sub = '';
   if (mode === 'sim') {
@@ -228,10 +207,6 @@ function GpsStatus({ mode, geo }) {
   );
 }
 
-// ── Progress bar ────────────────────────────────────────────
-// 점은 정류장 인덱스 비율(0~1)로 트랙 위에 절대배치한다 → 정류장 수에 상관없이
-// 항상 바 폭 안에 들어와 화면을 넘치지 않는다. 정류장이 많아 빽빽해지면
-// 핵심 지점(출발·환승·도착·현재·다음)만 점으로 남겨 가독성을 지킨다.
 const BAR_MAX_DOTS = 14;
 function ProgressBar({ barStops, pos }) {
   const n = barStops.length;
@@ -275,7 +250,6 @@ function ProgressBar({ barStops, pos }) {
   );
 }
 
-// ── Pre-alert bottom sheet (곧 내리세요) ────────────────────
 function PreAlert({ name, onConfirm }) {
   return (
     <div style={{ position:'absolute', inset:0, zIndex:40, display:'flex', flexDirection:'column', justifyContent:'flex-end' }}>
@@ -296,8 +270,6 @@ function PreAlert({ name, onConfirm }) {
   );
 }
 
-// ── Transfer sheet (갈아타세요) ─────────────────────────────
-// passed=true 이면 환승역을 이미 지난 상황 → "갈아탈 곳을 지나쳤어요"로 문구를 바꿔 즉시 하차를 유도한다.
 function TransferSheet({ from, nextLeg, passed, onBoard }) {
   const [count, setCount] = useState(8);
   useEffect(() => {
@@ -329,8 +301,6 @@ function TransferSheet({ from, nextLeg, passed, onBoard }) {
   );
 }
 
-// ── Final alert (지금 내리세요) — full red ───────────────────
-// passed=true 이면 하차역을 이미 지난 상황 → "지나쳤어요! 다음에 내리세요"로 안내한다.
 function FinalAlert({ name, passed, onConfirm }) {
   return (
     <div className="ag-flash" style={{ position:'absolute', inset:0, zIndex:50, background:T.red,
@@ -353,7 +323,6 @@ function FinalAlert({ name, passed, onConfirm }) {
   );
 }
 
-// ── Done screen ─────────────────────────────────────────────
 function DoneScreen({ dest, onHome }) {
   useEffect(()=>{ vibrate(80); }, []);
   return (

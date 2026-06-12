@@ -1,11 +1,4 @@
-// ─────────────────────────────────────────────────────────────
-// 어디가수? — 지역 대표 랜드마크 일러스트 (인라인 SVG, 의존성/라이선스 0)
-//   카드 썸네일 + 경로찾기 헤더 반투명 배경에 공용으로 쓰인다.
-//   color(currentColor)로 단색 실루엣을 그리며, 호출부가 배경·투명도를 정한다.
-//   실제 사진으로 바꾸려면 이 컴포넌트만 <img>로 교체하면 됨.
-// ─────────────────────────────────────────────────────────────
 const REGION_ART = {
-  // 서울 — N서울타워 + 도심 스카이라인
   seoul: (
     <g>
       <g fill="currentColor">
@@ -20,7 +13,6 @@ const REGION_ART = {
       </g>
     </g>
   ),
-  // 인천 — 인천대교 (사장교: 다이아몬드 주탑 + 사선 케이블)
   incheon: (
     <g>
       <g fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -37,7 +29,6 @@ const REGION_ART = {
       </g>
     </g>
   ),
-  // 부산 — 광안대교 (현수교) + 바다
   busan: (
     <g>
       <g fill="currentColor">
@@ -54,7 +45,6 @@ const REGION_ART = {
       </g>
     </g>
   ),
-  // 대구 — 이월드 83타워
   daegu: (
     <g fill="currentColor">
       <path d="M6 66 Q40 54 60 56 Q86 58 114 66 Z" />
@@ -64,7 +54,6 @@ const REGION_ART = {
       <circle cx="60" cy="7" r="2" />
     </g>
   ),
-  // 광주 — 무등산 (주상절리: 정상의 수직 기둥들)
   gwangju: (
     <g>
       <g fill="currentColor">
@@ -75,7 +64,6 @@ const REGION_ART = {
       </g>
     </g>
   ),
-  // 대전 — 엑스포 한빛탑 (테이퍼 타워)
   daejeon: (
     <g fill="currentColor">
       <path d="M55 60 L57 24 L63 24 L65 60 Z" />
@@ -85,7 +73,6 @@ const REGION_ART = {
       <rect x="58.6" y="4" width="2.8" height="8" />
     </g>
   ),
-  // 울산 — 조선소 골리앗 크레인 + 선체
   ulsan: (
     <g>
       <g fill="currentColor">
@@ -100,7 +87,6 @@ const REGION_ART = {
       </g>
     </g>
   ),
-  // 세종 — 정부세종청사 (용 형상의 곡선 옥상)
   sejong: (
     <g>
       <g fill="none" stroke="currentColor" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round">

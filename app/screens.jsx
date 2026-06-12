@@ -1,9 +1,5 @@
-// ─────────────────────────────────────────────────────────────
-// 어디가수? — Region · Route Input · Route Recommendation screens
-// ─────────────────────────────────────────────────────────────
 const { useState, useMemo } = React;
 
-// 브랜드 마크 — 친근한 정면 버스 + 목적지 핀 (images/logo.svg 와 동일)
 function BrandMark({ size = 60 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 96 96" style={{ display:'block' }}>
@@ -30,7 +26,6 @@ function BrandMark({ size = 60 }) {
   );
 }
 
-// 설정 진입 버튼(헤더 우상단) — light=어두운 배경 위(흰 아이콘)
 function GearButton({ onClick, light }) {
   return (
     <button onClick={onClick} aria-label="설정" style={{
@@ -41,7 +36,6 @@ function GearButton({ onClick, light }) {
   );
 }
 
-// ── Screen 1: Region selection ──────────────────────────────
 function RegionScreen({ onSelect, onSettings }) {
   return (
     <div style={{ background:T.paper, minHeight:'100%', display:'flex', flexDirection:'column' }}>
@@ -84,20 +78,17 @@ function RegionScreen({ onSelect, onSettings }) {
   );
 }
 
-// 데모 폴백: 정적 PLACES를 역 객체로 변환
 function staticStations(t) {
   return PLACES.filter(p => p.includes(t)).slice(0, 8)
     .map(name => ({ name, lat: (COORDS[name]||{}).lat, lng: (COORDS[name]||{}).lng, cls:'bus' }));
 }
 
-// ── Search overlay (shared by origin/destination) ───────────
 function SearchPanel({ field, region, recents, soundOn, onPick, onClose, onRemove }) {
   const [q, setQ] = useState('');
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [demo, setDemo] = useState(false);   // 폴백(데모 데이터) 사용 중 여부
+  const [demo, setDemo] = useState(false);
 
-  // 입력 디바운스 후 프록시 검색 → 실패 시 정적 데이터로 폴백
   useEffect(() => {
     const t = q.trim();
     if (!t) { setResults([]); setLoading(false); return; }
@@ -116,7 +107,6 @@ function SearchPanel({ field, region, recents, soundOn, onPick, onClose, onRemov
   const label = field === 'origin' ? '어디서 타시나요?' : '어디서 내리시나요?';
   const accent = field === 'origin' ? T.green : T.red;
 
-  // 역 선택 시 피드백: 짧은 진동(설정 시) + (음성 안내 설정 시) 선택 안내 발화
   function handlePick(p) {
     vibrateFeedback(35);
     speak(`${p.name}, ${field === 'origin' ? '출발지로' : '도착지로'} 선택했습니다`, soundOn);
@@ -192,7 +182,6 @@ function SearchPanel({ field, region, recents, soundOn, onPick, onClose, onRemov
 
 function Row({ icon, iconColor, text, sub, badge, onClick }) {
   return (
-    // onMouseDown preventDefault: 포커스된 입력창의 blur가 첫 탭을 먹는 것을 막아 단일 탭 선택
     <button onClick={onClick} onMouseDown={e=>e.preventDefault()} style={{
       width:'100%', display:'flex', alignItems:'center', gap:16, padding:'16px 22px',
       background:'none', border:'none', borderBottom:`1px solid ${T.line}`, cursor:'pointer',
@@ -213,7 +202,6 @@ function Row({ icon, iconColor, text, sub, badge, onClick }) {
   );
 }
 
-// 최근 검색 행 — 본문(선택) + 삭제(X) 두 버튼 분리 (버튼 중첩 회피)
 function RecentRow({ text, onClick, onRemove }) {
   return (
     <div style={{ display:'flex', alignItems:'center', borderBottom:`1px solid ${T.line}` }}>
@@ -236,7 +224,6 @@ function RecentRow({ text, onClick, onRemove }) {
   );
 }
 
-// 출발/도착 입력 필드 — 모듈 레벨 고정 컴포넌트(매 렌더 remount 방지 → 단일 클릭 동작)
 function RouteField({ value, placeholder, dotColor, icon, onClick }) {
   return (
     <button onClick={onClick} style={{
@@ -255,17 +242,14 @@ function RouteField({ value, placeholder, dotColor, icon, onClick }) {
   );
 }
 
-// ── Screen 2: Route input ───────────────────────────────────
 function InputScreen({ region, origin, dest, recents, soundOn, onBack, onSet, onSearch, onRemoveRecent, onSettings }) {
-  const [panel, setPanel] = useState(null); // 'origin' | 'dest' | null
+  const [panel, setPanel] = useState(null);
 
-  // 출발지·도착지가 같은 곳이면 검색 전에 차단(있으면 id, 없으면 이름으로 비교)
   const sameSpot = origin && dest &&
     (origin.id && dest.id ? origin.id === dest.id : origin.name === dest.name);
 
   return (
     <div style={{ background:T.paper, minHeight:'100%', display:'flex', flexDirection:'column', position:'relative' }}>
-      {/* 지역 대표 이미지가 반투명하게 깔린 헤더 */}
       <div style={{ position:'relative', background:region.tone, overflow:'hidden' }}>
         <div aria-hidden style={{ position:'absolute', right:-4, top:6, bottom:-6, width:165,
           opacity:0.22, color:'#fff', pointerEvents:'none', display:'flex', alignItems:'flex-end' }}>
@@ -302,8 +286,6 @@ function InputScreen({ region, origin, dest, recents, soundOn, onBack, onSet, on
   );
 }
 
-// ── Screen 3: Route recommendation ──────────────────────────
-// 경로 화면 빈 상태 메시지 (상황별)
 const ROUTE_EMPTY = {
   too_close: { title:'출발지와 도착지가 너무 가까워요', sub:'조금 더 떨어진 곳으로 다시 검색해 보세요' },
   no_coords: { title:'위치 정보를 찾지 못했어요',       sub:'출발지·도착지를 검색해서 다시 선택해 주세요' },
@@ -349,8 +331,6 @@ function RoutesScreen({ origin, dest, routes, note, onBack, onChoose }) {
   );
 }
 
-// 경로 총 거리(km, 소수 1자리 문자열). ODsay 실거리(distanceM)가 있으면 사용,
-// 없으면(데모·근거리 직행) 정류장 좌표(COORDS) 사이 직선거리를 합산해 환산한다. 좌표가 없으면 null.
 function routeKm(rt) {
   let m = rt.distanceM || 0;
   if (!m) {
@@ -415,8 +395,6 @@ function RouteCard({ rt, onChoose }) {
   );
 }
 
-// ── Settings sheet (음성·진동 설정) ─────────────────────────
-// 큰 토글/세그먼트로 노인 사용자가 다루기 쉽게. 값은 App이 보관·저장한다.
 function Toggle({ on, onClick }) {
   return (
     <button onClick={onClick} aria-label="켜기/끄기" aria-pressed={on} style={{

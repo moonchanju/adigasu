@@ -1,11 +1,3 @@
-// ─────────────────────────────────────────────────────────────
-// 어디가수? — 정적 서버 + ODsay 프록시 (의존성 0, Node 내장 모듈만)
-//
-// 실행:  ODSAY_API_KEY=발급받은키 node server.js
-//   - 키가 없으면 /api/* 는 503(no_key) → 앱은 자동으로 데모 데이터로 폴백.
-//   - ODsay 키는 서버에만 머무르고 브라우저로 노출되지 않는다(키 보호 + CORS 우회).
-// 접속:  http://localhost:8000/어디가수.html
-// ─────────────────────────────────────────────────────────────
 const http = require('http');
 const fs   = require('fs');
 const path = require('path');
@@ -13,14 +5,11 @@ const path = require('path');
 const PORT   = process.env.PORT || 8000;
 const ROOT   = __dirname;
 
-// 키 우선순위: 환경변수 → 로컬 키파일(.odsay_key). 파일은 .gitignore 로 커밋 제외.
 function loadKey() {
   if (process.env.ODSAY_API_KEY) return process.env.ODSAY_API_KEY.trim();
   try { return fs.readFileSync(path.join(ROOT, '.odsay_key'), 'utf8').trim(); } catch (e) { return ''; }
 }
 const KEY = loadKey();
-// ODsay에 등록한 URI(플랫폼=URI). 등록 URI와 Referer를 맞춰 서버 호출이 통과되도록 한다.
-// 배포 시 ODSAY_REFERER 로 실제 도메인을 넘기면 된다.
 const REFERER = process.env.ODSAY_REFERER || `http://localhost:${PORT}`;
 const ODSAY  = 'https://api.odsay.com/v1/api';
 
@@ -30,7 +19,6 @@ const MIME = {
   '.png':'image/png', '.jpg':'image/jpeg', '.svg':'image/svg+xml', '.json':'application/json',
 };
 
-// ODsay 호출 헬퍼 — 키를 붙여 외부 API를 대신 호출하고 result 만 돌려준다.
 async function odsay(endpoint, params) {
   const u = new URL(`${ODSAY}/${endpoint}`);
   u.searchParams.set('apiKey', KEY);
@@ -55,7 +43,7 @@ async function handleApi(req, res, url) {
       const q = url.searchParams.get('q') || '';
       const result = await odsay('searchStation', {
         stationName: q,
-        stationClass: url.searchParams.get('class') || '',   // 1=지하철 2=버스 (빈값=전체)
+        stationClass: url.searchParams.get('class') || '',
         CID: url.searchParams.get('cid') || '',
         displayCnt: 10,
       });
@@ -65,12 +53,11 @@ async function handleApi(req, res, url) {
       const p = url.searchParams;
       const result = await odsay('searchPubTransPathT', {
         SX: p.get('sx'), SY: p.get('sy'), EX: p.get('ex'), EY: p.get('ey'),
-        SearchPathType: p.get('type') || '0',                 // 0=전체 1=지하철 2=버스
+        SearchPathType: p.get('type') || '0',
         OPT: '0',
       });
       return sendJSON(res, 200, result);
     }
-    // 정류장 경유 버스 목록 (근거리 직행버스 탐색용)
     if (url.pathname === '/api/station-buses') {
       const result = await odsay('busStationInfo', {
         stationID: url.searchParams.get('stationID') || '',
@@ -78,7 +65,6 @@ async function handleApi(req, res, url) {
       });
       return sendJSON(res, 200, result);
     }
-    // 한 버스 노선의 정차 순서 (출발→도착 방향·중간 정류장 확인용)
     if (url.pathname === '/api/bus-lane') {
       const result = await odsay('busLaneDetail', {
         busID: url.searchParams.get('busID') || '',
@@ -95,7 +81,6 @@ async function handleApi(req, res, url) {
 function serveStatic(req, res, url) {
   let rel = decodeURIComponent(url.pathname);
   if (rel === '/') rel = '/어디가수.html';
-  // 디렉터리 탈출 방지
   const filePath = path.normalize(path.join(ROOT, rel));
   if (!filePath.startsWith(ROOT)) { res.writeHead(403); return res.end('forbidden'); }
   fs.readFile(filePath, (err, data) => {

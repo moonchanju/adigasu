@@ -24,6 +24,7 @@ node server.js
 | --- | --- |
 | `server.js` | 정적 서빙 + ODsay 프록시(키 보호·CORS 우회). 의존성 0, Node 내장 모듈만 |
 | `app/data.jsx` | 디자인 토큰, 데모 데이터, 아이콘 |
+| `app/regionart.jsx` | 8개 광역시 대표 일러스트 SVG (`RegionArt` 컴포넌트) |
 | `app/geo.jsx` | Geolocation(`watchPosition`) + Haversine 거리 + 지오펜싱 + 화면 유지(`useWakeLock`) |
 | `app/api.jsx` | 프록시 호출 + ODsay 응답 → 내부 경로 데이터 매핑 |
 | `app/ui.jsx` / `screens.jsx` / `navigation.jsx` / `main.jsx` | UI · 화면 · 안내 엔진 · 앱 셸 |
@@ -47,11 +48,9 @@ GPS는 HTTPS가 필수이므로 정적 호스팅(file://)만으론 안 되고, *
 2. 환경변수에 `ODSAY_API_KEY`, `ODSAY_REFERER=https://배포도메인` 설정
 3. ODsay LAB에서 **배포 도메인을 URI로 추가 등록**(프로토콜 제외, 예: `myapp.onrender.com`)
 
-## 남은 작업(선택)
+## 알려진 제약 및 선택 개선 사항
 
 - **주소 검색**: 현재는 역/정류장 이름 검색만(ODsay). "○○동 △△아파트" 같은 주소→좌표는
   카카오 등 별도 지오코더 키가 추가로 필요.
 - **iOS 진동**: iPhone Safari는 Vibration API 미지원 → 소리(TTS)+화면 색상반전+스크린리더(`aria-live`)로 보완됨.
 - **지오펜싱 임계값 튜닝**: 도착 70m / 예고 450m / 지나침 판정 130m·여유 50m(`app/geo.jsx`의 `GEO`)는 실제 탑승 테스트로 보정 권장.
-- **화면 유지(Wake Lock)**: 안내 중 화면 꺼짐으로 알림이 멈추지 않도록 Screen Wake Lock을 사용한다. 미지원 기기(일부 iOS)는 화면 점유형 알림에만 의존.
-- **하차역 지나침 알림**: 도착 반경(70m)을 건너뛰고 정류장을 지나치면 "지나쳤어요 · 다음 정류장에서 내리세요"로 보강 안내한다.

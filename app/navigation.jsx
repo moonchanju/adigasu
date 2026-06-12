@@ -148,7 +148,7 @@ function NavScreen({ route, soundOn, onToggleSound, onExit, onArrive }) {
           </div>
           <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:18, marginTop:18, color:T.inkSoft }}>
             <span style={{ display:'flex', alignItems:'center', gap:7, fontSize:19, fontWeight:700 }}>
-              <Icon name="flag" size={20} color={T.red} /> {route.arriveAt} 도착
+              <Icon name="flag" size={20} color={T.red} /> {route.arriveAt} 예상 도착
             </span>
             <span style={{ width:1, height:18, background:T.line }} />
             <span style={{ fontSize:19, fontWeight:700 }}>약 {minsLeft}분 남음</span>

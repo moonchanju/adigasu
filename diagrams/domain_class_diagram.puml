@@ -3,7 +3,6 @@
 skinparam defaultFontName "Apple SD Gothic Neo"
 
 class User {
-  userId : String
   selectedRegion : Region
 }
 class Route {

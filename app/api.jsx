@@ -109,6 +109,7 @@ function mapOdsayPaths(result, coordsOut) {
       recommended: false,
       transfers: Math.max(0, legs.length - 1),
       durationMin: info.totalTime || 0,
+      distanceM: info.totalDistance || 0,   // ODsay 실경로 총거리(m). 없으면 0(표시 시 좌표로 환산)
       walkMin,
       departAt: '', arriveAt: '',
       legs,

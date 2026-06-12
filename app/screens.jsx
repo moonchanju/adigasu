@@ -349,8 +349,24 @@ function RoutesScreen({ origin, dest, routes, note, onBack, onChoose }) {
   );
 }
 
+// 경로 총 거리(km, 소수 1자리 문자열). ODsay 실거리(distanceM)가 있으면 사용,
+// 없으면(데모·근거리 직행) 정류장 좌표(COORDS) 사이 직선거리를 합산해 환산한다. 좌표가 없으면 null.
+function routeKm(rt) {
+  let m = rt.distanceM || 0;
+  if (!m) {
+    rt.legs.forEach(leg => {
+      for (let i = 0; i < leg.stops.length - 1; i++) {
+        const a = COORDS[leg.stops[i]], b = COORDS[leg.stops[i + 1]];
+        if (a && b) m += distM(a, b);
+      }
+    });
+  }
+  return m > 0 ? (m / 1000).toFixed(1) : null;
+}
+
 function RouteCard({ rt, onChoose }) {
   const rec = rt.recommended;
+  const km = routeKm(rt);
   return (
     <div style={{
       background:T.surface, borderRadius:24, padding:'20px 20px 22px',
@@ -368,7 +384,7 @@ function RouteCard({ rt, onChoose }) {
       <div style={{ display:'flex', alignItems:'baseline', gap:12, marginTop:4 }}>
         <span style={{ fontSize:52, fontWeight:800, color:T.ink, letterSpacing:'-0.03em', lineHeight:1 }}>{rt.durationMin}분</span>
         <span style={{ display:'flex', alignItems:'center', gap:6, fontSize:18, fontWeight:700, color:T.muted }}>
-          <Icon name="clock" size={20} color={T.muted} /> {rt.departAt} → {rt.arriveAt}
+          <Icon name="clock" size={20} color={T.muted} /> 예상 {rt.departAt} → {rt.arriveAt}
         </span>
       </div>
 
@@ -385,6 +401,11 @@ function RouteCard({ rt, onChoose }) {
         <span style={{ display:'inline-flex', alignItems:'center', gap:5, fontSize:16, fontWeight:700, color:T.muted, marginLeft:2 }}>
           <Icon name="walk" size={18} color={T.muted} /> 도보 {rt.walkMin}분
         </span>
+        {km && (
+          <span style={{ display:'inline-flex', alignItems:'center', gap:5, fontSize:16, fontWeight:700, color:T.muted }}>
+            · 약 {km}km
+          </span>
+        )}
       </div>
 
       <div style={{ marginTop:16 }}>

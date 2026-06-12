@@ -26,7 +26,12 @@ async function odsay(endpoint, params) {
   for (const [k, v] of Object.entries(params)) if (v != null && v !== '') u.searchParams.set(k, v);
   const r = await fetch(u, { headers: { 'Accept': 'application/json', 'Referer': REFERER } });
   const j = await r.json();
-  if (j.error) throw new Error(`ODsay ${j.error.code || ''}: ${j.error.message || 'error'}`);
+  if (j.error) {
+    const e = Array.isArray(j.error) ? (j.error[0] || {}) : j.error;
+    const code = e.code != null ? e.code : '';
+    const msg  = e.message || e.msg || 'error';
+    throw new Error(`ODsay ${code}: ${msg}`.trim());
+  }
   return j.result || {};
 }
 

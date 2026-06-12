@@ -69,5 +69,14 @@
 <script type="text/babel" src="app/screens.jsx"></script>
 <script type="text/babel" src="app/navigation.jsx"></script>
 <script type="text/babel" src="app/main.jsx"></script>
+
+<!-- PWA: 서비스 워커 등록 (설치 가능 + 기본 오프라인) -->
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js').catch(() => {});
+    });
+  }
+</script>
 </body>
 </html>

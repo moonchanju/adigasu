@@ -4,17 +4,25 @@ sequenceDiagram
   participant GC as GeofenceChecker
   participant AM as AlertManager
   actor User
-  LT-->>NM: onLocationUpdate(location)
-  NM->>GC: checkDistance(cur, alightStation)
-  GC-->>NM: distance
+  LT-->>NM: onLocationUpdate(coords)
+  NM->>GC: geofenceLeg(stops, coords)
+  GC-->>NM: { nearestDist, alightDist }
   alt 하차역 약 450m 전 (isPreAlert == true)
-    NM->>AM: showPreAlert(station)
+    NM->>AM: firePre()
     AM->>AM: vibrate(예고 패턴)
-    AM-->>User: 바텀 시트 슬라이드 업 + 예고 진동
-  end
-  alt 목적지 도착 (isArrived == true)
-    NM->>AM: showFinalAlert(station)
+    AM->>AM: announce("곧 내리세요…")
+    AM-->>User: 바텀 시트 슬라이드 업 + 예고 진동/음성
+  else 하차역 지나침 (isPassed == true)
+    NM->>AM: firePassed()
     AM->>AM: vibrate(연속 패턴)
+    AM->>AM: announce("지나쳤어요 · 다음 정류장에서 내리세요")
+    AM-->>User: 지나침 알림 (다음 정류장 안내)
+    User-->>AM: 확인 버튼 클릭
+  else 목적지 도착 (isArrived == true)
+    NM->>AM: fireFinal()
+    AM->>AM: vibrate(연속 패턴)
+    AM->>AM: announce("지금 내리세요!")
     AM-->>User: 화면 색상 반전 + 강력한 연속 진동
     User-->>AM: 확인 버튼 클릭
   end
+  Note over AM: announce()는 음성(speak)과 aria-live 영역으로 동시 출력

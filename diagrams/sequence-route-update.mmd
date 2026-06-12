@@ -7,9 +7,8 @@ sequenceDiagram
   NM-->>User: 환승 안내 바텀시트 표시 (카운트다운 8초)
   alt 카운트다운 종료(8초) 또는 '갈아탔어요' 확인
     User-->>NM: 다음 구간 진행 (자동/수동)
-    NM->>Route: moveToNextSegment()
-    Route-->>NM: true (다음 구간)
-    NM->>NM: updateProgress()
-    NM->>LT: 새 구간 GPS 추적 계속
+    NM->>Route: doTransfer()
+    Route-->>NM: 다음 구간 (legIdx + 1)
+    NM->>LT: useGeolocation(true) — 새 구간 추적 계속
     NM-->>User: 다음 안내 구간으로 화면/상태 전환
   end

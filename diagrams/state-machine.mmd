@@ -1,13 +1,13 @@
 stateDiagram-v2
   [*] --> RegionSelection
   RegionSelection --> RouteInput : selectRegion()
-  RouteInput --> Searching : requestRoute()
+  RouteInput --> Searching : doSearch()
   Searching --> RouteRecommendation : 경로 탐색 완료
   RouteRecommendation --> RouteInput : 결과 없음 / 다시 입력하기
   RouteRecommendation --> Navigating : 경로 선택 / startNavigation()
-  Navigating --> Navigating : onLocationUpdate() / updateProgress()
+  Navigating --> Navigating : onLocationUpdate() / arriveAt()
   Navigating --> AutoTransition : 환승 안내 후 카운트다운(8초)·확인 / 환승역 지나침
-  AutoTransition --> Navigating : moveToNextSegment() / 다음 구간
+  AutoTransition --> Navigating : doTransfer() / 다음 구간
   Navigating --> PreAlert : isPreAlert == true
   PreAlert --> Navigating : 확인 / 계속 이동
   Navigating --> FinalAlert : isArrived == true / 하차역 지나침(다음에 내리세요)

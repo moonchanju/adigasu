@@ -17,5 +17,5 @@ sequenceDiagram
   API-->>RC: 경로 데이터
   RC->>RC: sortByTransfer(routes)
   RC-->>UI: List~Route~
-  UI->>SM: saveRecentSearch(station)
+  UI->>SM: addRecent(station)
   UI-->>User: 추천/대체 경로 표시

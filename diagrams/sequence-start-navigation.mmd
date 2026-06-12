@@ -5,12 +5,12 @@ sequenceDiagram
   participant LT as LocationTracker
   participant GC as GeofenceChecker
   User->>UI: "이 경로로 안내" 선택
-  UI->>NM: new NavigationManager(route)
-  NM->>LT: startTracking()
+  UI->>NM: startNavigation()
+  NM->>LT: useGeolocation(true)
   loop 위치 갱신마다
-    LT-->>NM: onLocationUpdate(location)
-    NM->>GC: checkDistance(cur, alightStation)
-    GC-->>NM: distance
-    NM->>NM: updateProgress()
+    LT-->>NM: onLocationUpdate(coords)
+    NM->>GC: geofenceLeg(stops, coords)
+    GC-->>NM: { nearestIdx, nearestDist, alightDist }
+    NM->>NM: arriveAt(nearestIdx)
     NM-->>User: 현재 위치/남은 정류장 수 갱신
   end

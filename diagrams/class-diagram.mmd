@@ -55,6 +55,7 @@ classDiagram
     -LocationTracker tracker
     -GeofenceChecker geofence
     -AlertManager alertManager
+    -double minAlight
     +startNavigation() void
     +arriveAt(int target) void
     +advance() void
@@ -64,6 +65,7 @@ classDiagram
     -int watchId
     -Location currentLocation
     +useGeolocation(boolean enabled) State
+    +useWakeLock(boolean active) void
   }
   class Location {
     -double lat
@@ -73,16 +75,20 @@ classDiagram
   class GeofenceChecker {
     -double preAlertRadius
     -double finalRadius
+    -double passRadius
     +distM(Location a, Location b) double
     +geofenceLeg(List~Station~ stops, Location cur) Result
     +isPreAlert(double distance) boolean
     +isArrived(double distance) boolean
+    +isPassed(double minDist, double curDist) boolean
   }
   class AlertManager {
     +firePre(Station station) void
     +fireTransfer(RouteSegment next) void
     +fireFinal(Station station) void
+    +firePassed(Station station) void
     +vibrate(int[] pattern) void
+    +announce(String text) void
     +speak(String text, boolean soundOn) void
   }
   class Alert {
